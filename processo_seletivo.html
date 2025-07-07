@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Processo Seletivo | Formatar RH</title>
+  <link rel="icon" type="image/x-icon" href="icon.ico" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="sidebar" id="sidebar" style="background:linear-gradient(135deg,#1e293b 80%,#2563eb 120%);box-shadow:4px 0 24px 0 rgba(30,41,59,0.18);border-right:2px solid #3b4860;min-width:64px;width:200px;transition:width .22s cubic-bezier(.4,0,.2,1);padding-top:0;position:fixed;left:0;top:0;bottom:0;z-index:100;border-radius:0 18px 18px 0;">
+    <button id="sidebarToggle" title="Recolher menu" style="background:#fff;border:none;outline:none;position:absolute;top:18px;right:-18px;z-index:10;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px #2563eb22;cursor:pointer;transition:background .18s;"><i class="fas fa-chevron-left" id="sidebarToggleIcon" style="color:#2563eb;font-size:1.3rem;transition:transform .2s;"></i></button>
+    <div style="display:flex;justify-content:center;align-items:center;padding:22px 0 14px 0;">
+      <img src="contrhol.png" alt="Logo Contrhol" id="sidebarLogo" style="max-width:110px;max-height:60px;display:block;filter:drop-shadow(0 2px 8px #2563eb55);transition:opacity .18s;" />
+    </div>
+    <div class="sidebar-separator"></div>
+    <nav style="display:flex;flex-direction:column;gap:8px;padding:0 10px 0 10px;">
+      <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard</span></a>
+      <a href="curriculos.html" class="sidebar-link"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Currículos</span></a>
+      <a href="vagas.html" class="sidebar-link"><i class="fas fa-briefcase"></i> <span class="sidebar-text">Vagas</span></a>
+      <a href="compatibilidade.html" class="sidebar-link"><i class="fas fa-balance-scale"></i> <span class="sidebar-text">Compatibilidade</span></a>
+      <a href="processo_seletivo.html" class="active sidebar-link"><i class="fas fa-tasks"></i> <span class="sidebar-text">Processo Seletivo</span></a>
+      <a href="#" onclick="logout()" class="sidebar-link"><i class="fas fa-sign-out-alt"></i> <span class="sidebar-text">Sair</span></a>
+    </nav>
+    <div class="sidebar-powered">Powered By <span>Formatar</span></div>
+  </div>
+  <div class="main-content" style="width:calc(100vw - 200px);margin-left:200px;min-height:100vh;overflow-x:hidden;background:#f3f4f6;display:flex;flex-direction:column;transition:width .22s cubic-bezier(.4,0,.2,1);">
+    <header>
+      <h1 class="page-title"><i class="fas fa-tasks"></i> Processo Seletivo</h1>
+    </header>
+    <main>
+      <div id="processo-seletivo-content">
+        <h2 class="text-2xl font-semibold mb-4">Gerenciamento do Processo Seletivo</h2>
+        <p class="text-gray-600 mb-6">Aqui você poderá gerenciar os candidatos em cada etapa do processo seletivo para as vagas abertas.</p>
+        <div id="processo-seletivo-container" class="mt-1">
+          <div class="mb-6">
+            <label for="vagaBuscaProcessoSeletivo" class="block text-sm font-medium text-gray-700 mb-1">Buscar Vaga:</label>
+            <div class="relative">
+              <input id="vagaBuscaProcessoSeletivo" type="text" placeholder="Digite o nome da vaga ou empresa..." class="w-full md:w-1/2 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50" autocomplete="off" />
+              <div id="vagaDropdownProcessoSeletivo" class="absolute z-20 left-0 right-0 mt-2 bg-white border border-blue-100 rounded-xl shadow-lg max-h-60 overflow-y-auto hidden"></div>
+            </div>
+          </div>
+          <div id="processo-seletivo-content-area" class="space-y-8"></div>
+        </div>
+        <div id="loadingProcessoSeletivo" class="text-center py-4" style="display: none;">Carregando dados do processo seletivo...</div>
+      </div>
+    </main>
+  </div>
+  <script src="assets/js/common.js"></script>
+  <script src="assets/js/processo_seletivo.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+    sidebarToggle.onclick = function() {
+      sidebar.classList.toggle('minimized');
+      document.querySelector('.main-content').style.width = sidebar.classList.contains('minimized') ? 'calc(100vw - 60px)' : 'calc(100vw - 200px)';
+      document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('minimized') ? '60px' : '200px';
+      sidebarToggle.title = sidebar.classList.contains('minimized') ? 'Expandir menu' : 'Recolher menu';
+      sidebarToggleIcon.style.transform = sidebar.classList.contains('minimized') ? 'rotate(180deg)' : 'rotate(0deg)';
+    };
+  </script>
+  <style>
+    .sidebar.minimized { width: 60px !important; }
+    .sidebar.minimized .sidebar-text, .sidebar.minimized #sidebarLogo { opacity: 0; pointer-events: none; width:0; height:0; }
+    .sidebar.minimized nav a { justify-content: center; }
+    .sidebar nav a.sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      border-radius: 10px;
+      color: #e0e7ef;
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      transition: background 0.22s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+      margin-bottom: 4px;
+      box-shadow: none;
+      min-width: 40px;
+      justify-content: flex-start;
+      white-space: nowrap;
+      text-shadow: 0 1px 4px #1e293b44;
+    }
+    .sidebar nav a.sidebar-link i {
+      font-size: 1.15em;
+      opacity: 0.88;
+      min-width: 20px;
+      text-align: center;
+      transition: color .18s, transform .18s;
+    }
+    .sidebar nav a.sidebar-link.active, .sidebar nav a.sidebar-link:hover {
+      background: linear-gradient(90deg,#2563eb 60%,#1e40af 120%);
+      color: #fff;
+      box-shadow: 0 4px 16px #2563eb33;
+      transform: translateX(2px) scale(1.04);
+    }
+    .sidebar nav a.sidebar-link.active {
+      font-weight: 700;
+      border-left: 4px solid #fff;
+      color: #fff;
+    }
+    .sidebar nav a.sidebar-link:last-child {
+      margin-top: 12px;
+      color: #fca5a5;
+      font-weight: 600;
+    }
+    .sidebar nav a.sidebar-link:last-child:hover {
+      background: #fff1f2;
+      color: #dc2626;
+    }
+    #sidebarLogo {
+      max-width: 110px;
+      max-height: 60px;
+      display: block;
+      filter: drop-shadow(0 2px 8px #2563eb55);
+      transition: opacity .18s;
+    }
+    #sidebarToggle:hover { background: #e0e7ef; }
+    .sidebar.minimized #sidebarToggleIcon { transform: rotate(180deg); }
+    .page-title {
+      color: #1e293b;
+      font-size: 2.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5em;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-separator {
+      width: 80%;
+      height: 1.5px;
+      background: linear-gradient(90deg,#2563eb33,#fff0,#2563eb33);
+      margin: 18px auto 10px auto;
+      border-radius: 2px;
+      box-shadow: 0 1px 4px #2563eb22;
+    }
+    .sidebar-powered {
+      margin-top: auto;
+      padding: 10px 0 6px 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #a3adc2;
+      opacity: 0.65;
+      letter-spacing: 0.01em;
+      font-weight: 400;
+      user-select: none;
+    }
+    .sidebar-powered span {
+      color: #2563eb;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</body>
+</html> 

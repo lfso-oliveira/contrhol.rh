@@ -1,0 +1,76 @@
+Array
+(
+    [method] => POST
+    [input] => {"company":"vaga teste","title":"teste","quantidade":"1","location":"Divinópolis","salary_range":"3333","deadline":"2025-07-07","status":"Em Divulgação","status_registro":"ativo","candidato":"","escolaridade":"","description":"teste","requirements":"teste","keywords":"teste"}
+    [headers] => Array
+        (
+            [Host] => localhost
+            [Connection] => keep-alive
+            [Content-Length] => 279
+            [sec-ch-ua-platform] => "Windows"
+            [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+            [sec-ch-ua] => "Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"
+            [Content-Type] => application/json
+            [sec-ch-ua-mobile] => ?0
+            [Accept] => */*
+            [Origin] => http://localhost
+            [Sec-Fetch-Site] => same-origin
+            [Sec-Fetch-Mode] => cors
+            [Sec-Fetch-Dest] => empty
+            [Referer] => http://localhost/public_html/dash/vagas.html
+            [Accept-Encoding] => gzip, deflate, br, zstd
+            [Accept-Language] => pt-BR,pt;q=0.9,en;q=0.8,af;q=0.7
+        )
+
+)
+Array
+(
+    [method] => POST
+    [input] => {"company":"vaga teste 2","title":"teste","quantidade":"1","location":"Divinópolis","salary_range":"3333","deadline":"2025-07-07","status":"Em Divulgação","status_registro":"ativo","candidato":"","escolaridade":"","description":"teste","requirements":"teste","keywords":"teste","id":"1c2aafef-01d9-494f-8945-b037d4616b68"}
+    [headers] => Array
+        (
+            [Host] => localhost
+            [Connection] => keep-alive
+            [Content-Length] => 325
+            [sec-ch-ua-platform] => "Windows"
+            [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+            [sec-ch-ua] => "Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"
+            [Content-Type] => application/json
+            [sec-ch-ua-mobile] => ?0
+            [Accept] => */*
+            [Origin] => http://localhost
+            [Sec-Fetch-Site] => same-origin
+            [Sec-Fetch-Mode] => cors
+            [Sec-Fetch-Dest] => empty
+            [Referer] => http://localhost/public_html/dash/vagas.html
+            [Accept-Encoding] => gzip, deflate, br, zstd
+            [Accept-Language] => pt-BR,pt;q=0.9,en;q=0.8,af;q=0.7
+        )
+
+)
+2025-07-07 18:50:59 - ERRO: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '1c2aafef-01d9-494f-8945-b037d4616b68' for key 'vagas.PRIMARY'
+Array
+(
+    [method] => POST
+    [input] => {"company":"vaga teste 2","title":"teste","quantidade":"1","location":"Divinópolis","salary_range":"3333","deadline":"2025-07-07","status":"Em Divulgação","status_registro":"ativo","candidato":"","escolaridade":"","description":"teste","requirements":"teste","keywords":"teste","id":"1c2aafef-01d9-494f-8945-b037d4616b68"}
+    [headers] => Array
+        (
+            [Host] => localhost
+            [Connection] => keep-alive
+            [Content-Length] => 325
+            [sec-ch-ua-platform] => "Windows"
+            [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+            [sec-ch-ua] => "Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"
+            [Content-Type] => application/json
+            [sec-ch-ua-mobile] => ?0
+            [Accept] => */*
+            [Origin] => http://localhost
+            [Sec-Fetch-Site] => same-origin
+            [Sec-Fetch-Mode] => cors
+            [Sec-Fetch-Dest] => empty
+            [Referer] => http://localhost/public_html/dash/vagas.html
+            [Accept-Encoding] => gzip, deflate, br, zstd
+            [Accept-Language] => pt-BR,pt;q=0.9,en;q=0.8,af;q=0.7
+        )
+
+)

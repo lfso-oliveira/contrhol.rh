@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Formatar RH</title>
+  <link rel="icon" type="image/x-icon" href="icon.ico" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body style="min-height:100vh;background:linear-gradient(135deg,#e0e7ff 0%,#f3f4f6 100%);display:flex;align-items:center;justify-content:center;">
+  <div class="login-container" style="max-width:400px;width:100%;margin:auto;background:#fff;padding:38px 40px 32px 40px;border-radius:18px;box-shadow:0 4px 32px #2563eb22;display:flex;flex-direction:column;align-items:center;">
+    <div style="background:linear-gradient(135deg,#2563eb 60%,#1e293b 100%);border-radius:50%;width:80px;height:80px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px #2563eb33;margin-bottom:18px;">
+      <img src="contrhol.png" alt="Logo Contrhol" style="max-width:54px;max-height:54px;display:block;" />
+    </div>
+    <h2 style="text-align:center;margin-bottom:24px;font-size:2rem;color:#2563eb;font-weight:700;letter-spacing:0.01em;">Login</h2>
+    <form id="login-form" style="width:100%;display:flex;flex-direction:column;gap:18px;">
+      <div style="position:relative;width:100%;max-width:100%;">
+        <input type="email" id="login-email" name="email" placeholder="E-mail" required autocomplete="username" style="width:100%;max-width:100%;padding:14px 44px 14px 16px;font-size:1.1rem;border-radius:8px;border:1.5px solid #dbeafe;background:#e8f0fe;outline:none;transition:border-color .2s;box-sizing:border-box;" />
+        <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);color:#2563eb;font-size:1.3em;pointer-events:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6.75A2.75 2.75 0 0 1 4.75 4h14.5A2.75 2.75 0 0 1 22 6.75v10.5A2.75 2.75 0 0 1 19.25 20H4.75A2.75 2.75 0 0 1 2 17.25V6.75Zm2.75-1.25A1.25 1.25 0 0 0 3.5 6.75v.38l8.5 5.32 8.5-5.32v-.38A1.25 1.25 0 0 0 19.25 5.5H4.75Zm15.75 3.12-7.7 4.82a1.25 1.25 0 0 1-1.3 0L3.5 8.62v8.63A1.25 1.25 0 0 0 4.75 18.5h14.5A1.25 1.25 0 0 0 20.5 17.25V8.62Z"/></svg>
+        </span>
+      </div>
+      <div style="position:relative;width:100%;max-width:100%;">
+        <input type="password" id="login-password" name="password" placeholder="Senha" required autocomplete="current-password" style="width:100%;max-width:100%;padding:14px 44px 14px 16px;font-size:1.1rem;border-radius:8px;border:1.5px solid #dbeafe;background:#e8f0fe;outline:none;transition:border-color .2s;box-sizing:border-box;" />
+        <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);color:#2563eb;font-size:1.3em;pointer-events:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-6-6V9a6 6 0 1 1 12 0v2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Zm2-2v2h8V9a4 4 0 1 0-8 0Zm-2 4v5h12v-5H6Z"/></svg>
+        </span>
+      </div>
+      <button type="submit" style="width:100%;padding:14px 0;font-size:1.2rem;font-weight:600;background:#2563eb;color:#fff;border:none;border-radius:8px;box-shadow:0 2px 8px #2563eb22;cursor:pointer;transition:background .2s;">Entrar</button>
+    </form>
+    <div id="login-error" style="color:#e11d48;display:none;margin-top:14px;text-align:center;font-weight:500;">E-mail ou senha inválidos.</div>
+  </div>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <script>
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      if (email === 'admin@formatar.com' && password === 'admin123') {
+        localStorage.setItem('isLoggedIn', 'true');
+        window.location.href = 'dashboard.html';
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

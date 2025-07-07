@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Currículos | Formatar RH</title>
+  <link rel="icon" type="image/x-icon" href="icon.ico" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="sidebar" id="sidebar" style="background:linear-gradient(135deg,#1e293b 80%,#2563eb 120%);box-shadow:4px 0 24px 0 rgba(30,41,59,0.18);border-right:2px solid #3b4860;min-width:64px;width:200px;transition:width .22s cubic-bezier(.4,0,.2,1);padding-top:0;position:fixed;left:0;top:0;bottom:0;z-index:100;border-radius:0 18px 18px 0;">
+    <button id="sidebarToggle" title="Recolher menu" style="background:#fff;border:none;outline:none;position:absolute;top:18px;right:-18px;z-index:10;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px #2563eb22;cursor:pointer;transition:background .18s;"><i class="fas fa-chevron-left" id="sidebarToggleIcon" style="color:#2563eb;font-size:1.3rem;transition:transform .2s;"></i></button>
+    <div style="display:flex;justify-content:center;align-items:center;padding:22px 0 14px 0;">
+      <img src="contrhol.png" alt="Logo Contrhol" id="sidebarLogo" style="max-width:110px;max-height:60px;display:block;filter:drop-shadow(0 2px 8px #2563eb55);transition:opacity .18s;" />
+    </div>
+    <div class="sidebar-separator"></div>
+    <nav style="display:flex;flex-direction:column;gap:8px;padding:0 10px 0 10px;">
+      <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard</span></a>
+      <a href="curriculos.html" class="active sidebar-link"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Currículos</span></a>
+      <a href="vagas.html" class="sidebar-link"><i class="fas fa-briefcase"></i> <span class="sidebar-text">Vagas</span></a>
+      <a href="compatibilidade.html" class="sidebar-link"><i class="fas fa-balance-scale"></i> <span class="sidebar-text">Compatibilidade</span></a>
+      <a href="processo_seletivo.html" class="sidebar-link"><i class="fas fa-tasks"></i> <span class="sidebar-text">Processo Seletivo</span></a>
+      <a href="#" onclick="logout()" class="sidebar-link"><i class="fas fa-sign-out-alt"></i> <span class="sidebar-text">Sair</span></a>
+    </nav>
+    <div class="sidebar-powered">Powered By <span>Formatar</span></div>
+  </div>
+  <div class="main-content" style="width:calc(100vw - 200px);margin-left:200px;min-height:100vh;overflow-x:hidden;background:#f3f4f6;display:flex;flex-direction:column;transition:width .22s cubic-bezier(.4,0,.2,1);">
+    <style>
+      .sidebar {
+        font-size: 0.97rem;
+        font-family: 'Inter', Arial, sans-serif;
+        border-radius: 0 18px 18px 0;
+        background: linear-gradient(135deg,#1e293b 80%,#2563eb 120%);
+        box-shadow: 4px 0 24px 0 rgba(30,41,59,0.18);
+        border-right: 2px solid #3b4860;
+        min-height: 100vh;
+        position:relative;
+        transition:width .22s cubic-bezier(.4,0,.2,1);
+        overflow-x: hidden;
+      }
+      .sidebar.minimized { width: 60px !important; }
+      .sidebar.minimized .sidebar-text, .sidebar.minimized #sidebarLogo { opacity: 0; pointer-events: none; width:0; height:0; }
+      .sidebar.minimized nav a { justify-content: center; }
+      .sidebar nav a.sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 16px;
+        border-radius: 10px;
+        color: #e0e7ef;
+        font-size: 1.05rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        transition: background 0.22s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+        margin-bottom: 4px;
+        box-shadow: none;
+        min-width: 40px;
+        justify-content: flex-start;
+        white-space: nowrap;
+        text-shadow: 0 1px 4px #1e293b44;
+      }
+      .sidebar nav a.sidebar-link i {
+        font-size: 1.15em;
+        opacity: 0.88;
+        min-width: 20px;
+        text-align: center;
+        transition: color .18s, transform .18s;
+      }
+      .sidebar nav a.sidebar-link.active, .sidebar nav a.sidebar-link:hover {
+        background: linear-gradient(90deg,#2563eb 60%,#1e40af 120%);
+        color: #fff;
+        box-shadow: 0 4px 16px #2563eb33;
+        transform: translateX(2px) scale(1.04);
+      }
+      .sidebar nav a.sidebar-link.active {
+        font-weight: 700;
+        border-left: 4px solid #fff;
+        color: #fff;
+      }
+      .sidebar nav a.sidebar-link:last-child {
+        margin-top: 12px;
+        color: #fca5a5;
+        font-weight: 600;
+      }
+      .sidebar nav a.sidebar-link:last-child:hover {
+        background: #fff1f2;
+        color: #dc2626;
+      }
+      #sidebarToggle:hover { background: #e0e7ef; }
+      .sidebar.minimized #sidebarToggleIcon { transform: rotate(180deg); }
+      .page-title {
+        color: #1e293b;
+        font-size: 2.1rem;
+        font-weight: 700;
+        margin-bottom: 0.5em;
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .sidebar-separator {
+        width: 80%;
+        height: 1.5px;
+        background: linear-gradient(90deg,#2563eb33,#fff0,#2563eb33);
+        margin: 18px auto 10px auto;
+        border-radius: 2px;
+        box-shadow: 0 1px 4px #2563eb22;
+      }
+      .sidebar-powered {
+        margin-top: auto;
+        padding: 10px 0 6px 0;
+        text-align: center;
+        font-size: 0.82rem;
+        color: #a3adc2;
+        opacity: 0.65;
+        letter-spacing: 0.01em;
+        font-weight: 400;
+        user-select: none;
+      }
+      .sidebar-powered span {
+        color: #2563eb;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+      /* --- Melhorias visuais currículos --- */
+      .filtros-card {
+        background: linear-gradient(120deg, #f3f4f6 60%, #e0e7ef 100%);
+        border-radius: 18px;
+        box-shadow: 0 4px 24px #2563eb18, 0 1.5px 0 #2563eb11;
+        padding: 32px 28px 18px 28px;
+        margin-bottom: 28px;
+        transition: box-shadow .18s, transform .18s;
+      }
+      .filtros-card:hover {
+        box-shadow: 0 8px 32px #2563eb22, 0 2px 0 #2563eb11;
+        transform: translateY(-2px) scale(1.01);
+      }
+      .filtros-card label {
+        color: #1e293b;
+        font-weight: 600;
+      }
+      .filtros-card input, .filtros-card select {
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1.5px solid #cbd5e1;
+        font-size: 1rem;
+        transition: border .18s, box-shadow .18s;
+      }
+      .filtros-card input:focus, .filtros-card select:focus {
+        border: 1.5px solid #2563eb;
+        box-shadow: 0 0 0 2px #2563eb22;
+      }
+      .filtros-card .btn {
+        transition: transform .13s, box-shadow .13s;
+        box-shadow: 0 2px 8px #2563eb11;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      .filtros-card .btn:hover {
+        transform: scale(1.06);
+        box-shadow: 0 4px 16px #2563eb22;
+      }
+      .filtros-card .btn i {
+        font-size: 1.1em;
+      }
+      .curriculos-table {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px #2563eb11;
+        overflow: hidden;
+      }
+      .curriculos-table thead tr {
+        background: linear-gradient(90deg, #e0e7ef 60%, #f3f4f6 100%);
+      }
+      .curriculos-table th, .curriculos-table td {
+        padding: 14px 12px;
+        font-size: 1rem;
+      }
+      .curriculos-table tbody tr:nth-child(even) {
+        background: #f8fafc;
+      }
+      .curriculos-table tbody tr:hover {
+        background: #dbeafe;
+        box-shadow: 0 2px 12px #2563eb22;
+        transition: background .16s, box-shadow .16s;
+      }
+      .curriculos-table .acoes-btn {
+        background: #2563eb;
+        color: #fff;
+        border-radius: 8px;
+        padding: 7px 13px;
+        font-size: 1.05em;
+        margin-right: 6px;
+        border: none;
+        cursor: pointer;
+        transition: background .16s, transform .13s;
+      }
+      .curriculos-table .acoes-btn:last-child { margin-right: 0; }
+      .curriculos-table .acoes-btn:hover {
+        background: #1e40af;
+        transform: scale(1.08);
+      }
+      .curriculos-table .acoes-btn[title]:hover:after {
+        content: attr(title);
+        position: absolute;
+        background: #1e293b;
+        color: #fff;
+        font-size: 0.85em;
+        padding: 4px 10px;
+        border-radius: 6px;
+        left: 50%;
+        top: -32px;
+        white-space: nowrap;
+        transform: translateX(-50%);
+        z-index: 10;
+        opacity: 0.95;
+      }
+      @media (max-width: 900px) {
+        .filtros-card { padding: 18px 8px 10px 8px; }
+        .curriculos-table th, .curriculos-table td { font-size: 0.97em; padding: 10px 6px; }
+      }
+      @media (max-width: 700px) {
+        .main-content { margin-left: 0 !important; width: 100vw !important; }
+        .sidebar { position: absolute; z-index: 200; }
+        .filtros-card, .curriculos-table { border-radius: 10px; }
+      }
+    </style>
+    <script>
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+      sidebarToggle.onclick = function() {
+        sidebar.classList.toggle('minimized');
+        document.querySelector('.main-content').style.width = sidebar.classList.contains('minimized') ? 'calc(100vw - 60px)' : 'calc(100vw - 200px)';
+        document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('minimized') ? '60px' : '200px';
+        sidebarToggle.title = sidebar.classList.contains('minimized') ? 'Expandir menu' : 'Recolher menu';
+        sidebarToggleIcon.style.transform = sidebar.classList.contains('minimized') ? 'rotate(180deg)' : 'rotate(0deg)';
+      };
+    </script>
+    <header>
+      <h1 class="page-title"><i class="fas fa-file-alt"></i> Currículos</h1>
+    </header>
+    <main>
+      <div id="curriculos-content">
+        <div class="filtros-card" id="filtrosCard">
+          <div class="flex items-center justify-between mb-2">
+            <span style="font-size:1.15em;font-weight:600;color:#1e293b;">Filtros</span>
+            <button id="toggleFiltros" class="btn bg-gray-200 hover:bg-gray-300 text-accent px-3 py-1 rounded-lg flex items-center gap-1" style="font-size:1em;font-weight:500;">
+              <i id="toggleIcon" class="fas fa-chevron-up"></i> <span class="hidden md:inline">Minimizar</span>
+            </button>
+          </div>
+          <div class="flex-1 flex items-end gap-2 flex-wrap mb-2">
+            <div class="w-full">
+              <label class="block text-sm font-medium mb-1 text-gray-700">Pesquisar Currículos</label>
+              <div style="position:relative;">
+                <input type="text" id="searchInput" placeholder="Pesquisar por nome, e-mail ou área de interesse..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 pl-10" />
+                <button id="searchButton" class="btn bg-accent text-white px-3 py-2 rounded-lg flex items-center gap-2" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);"><i class="fas fa-search"></i></button>
+                <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#2563eb;opacity:0.7;"></i>
+              </div>
+            </div>
+          </div>
+          <div id="filtrosConteudo">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Início</label>
+                <input type="date" id="resumeDataInicio" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Fim</label>
+                <input type="date" id="resumeDataFim" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Área de Interesse</label>
+                <select id="areaFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50">
+                  <option value="">Todas as áreas</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Escolaridade</label>
+                <select id="escolaridadeFilter" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50">
+                  <option value="">Todas</option>
+                  <option value="Ensino Fundamental">Ensino Fundamental</option>
+                  <option value="Ensino Médio">Ensino Médio</option>
+                  <option value="Ensino Técnico">Ensino Técnico</option>
+                  <option value="Ensino Superior">Ensino Superior</option>
+                  <option value="Pós-graduação">Pós-graduação</option>
+                  <option value="Mestrado">Mestrado</option>
+                  <option value="Doutorado">Doutorado</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex justify-between items-center pt-2 flex-wrap gap-2">
+              <button id="applyFilters" class="btn bg-accent text-white py-2.5 px-6 rounded-lg flex items-center gap-2">
+                <i class="fas fa-filter"></i> Aplicar Filtros
+              </button>
+              <button id="downloadFiltered" class="btn bg-secondary text-white py-2.5 px-6 rounded-lg flex items-center gap-2">
+                <i class="fas fa-download"></i> Baixar Currículos Filtrados
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto mt-6 curriculos-table">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Escolaridade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="resumeTableBody"></tbody>
+          </table>
+        </div>
+        <div id="loaderCurriculos" style="display:none;text-align:center;padding:32px 0;">
+          <i class="fas fa-spinner fa-spin fa-2x" style="color:#2563eb;"></i>
+          <div style="color:#2563eb;font-weight:500;margin-top:10px;">Carregando currículos...</div>
+        </div>
+        <div id="emptyCurriculos" style="display:none;text-align:center;padding:32px 0;">
+          <i class="fas fa-folder-open fa-2x" style="color:#64748b;"></i>
+          <div style="color:#64748b;font-weight:500;margin-top:10px;">Nenhum currículo encontrado para os filtros selecionados.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="assets/js/common.js"></script>
+  <script src="assets/js/curriculos.js"></script>
+  <script>
+    // Minimizar/expandir filtros avançados
+    const toggleBtn = document.getElementById('toggleFiltros');
+    const filtrosConteudo = document.getElementById('filtrosConteudo');
+    const toggleIcon = document.getElementById('toggleIcon');
+    let filtrosMinimizados = false;
+    toggleBtn.onclick = function() {
+      filtrosMinimizados = !filtrosMinimizados;
+      filtrosConteudo.style.display = filtrosMinimizados ? 'none' : '';
+      toggleIcon.className = filtrosMinimizados ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+      toggleBtn.querySelector('span').textContent = filtrosMinimizados ? 'Expandir' : 'Minimizar';
+    };
+  </script>
+</body>
+</html> 

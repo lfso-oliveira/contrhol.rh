@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compatibilidade | Formatar RH</title>
+  <link rel="icon" type="image/x-icon" href="icon.ico" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="sidebar" id="sidebar" style="background:linear-gradient(135deg,#1e293b 80%,#2563eb 120%);box-shadow:4px 0 24px 0 rgba(30,41,59,0.18);border-right:2px solid #3b4860;min-width:64px;width:200px;transition:width .22s cubic-bezier(.4,0,.2,1);padding-top:0;position:fixed;left:0;top:0;bottom:0;z-index:100;border-radius:0 18px 18px 0;">
+    <button id="sidebarToggle" title="Recolher menu" style="background:#fff;border:none;outline:none;position:absolute;top:18px;right:-18px;z-index:10;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px #2563eb22;cursor:pointer;transition:background .18s;"><i class="fas fa-chevron-left" id="sidebarToggleIcon" style="color:#2563eb;font-size:1.3rem;transition:transform .2s;"></i></button>
+    <div style="display:flex;justify-content:center;align-items:center;padding:22px 0 14px 0;">
+      <img src="contrhol.png" alt="Logo Contrhol" id="sidebarLogo" style="max-width:110px;max-height:60px;display:block;filter:drop-shadow(0 2px 8px #2563eb55);transition:opacity .18s;" />
+    </div>
+    <div class="sidebar-separator"></div>
+    <nav style="display:flex;flex-direction:column;gap:8px;padding:0 10px 0 10px;">
+      <a href="dashboard.html" class="sidebar-link"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard</span></a>
+      <a href="curriculos.html" class="sidebar-link"><i class="fas fa-file-alt"></i> <span class="sidebar-text">Currículos</span></a>
+      <a href="vagas.html" class="sidebar-link"><i class="fas fa-briefcase"></i> <span class="sidebar-text">Vagas</span></a>
+      <a href="compatibilidade.html" class="active sidebar-link"><i class="fas fa-balance-scale"></i> <span class="sidebar-text">Compatibilidade</span></a>
+      <a href="processo_seletivo.html" class="sidebar-link"><i class="fas fa-tasks"></i> <span class="sidebar-text">Processo Seletivo</span></a>
+      <a href="#" onclick="logout()" class="sidebar-link"><i class="fas fa-sign-out-alt"></i> <span class="sidebar-text">Sair</span></a>
+    </nav>
+    <div class="sidebar-powered">Powered By <span>Formatar</span></div>
+  </div>
+  <div class="main-content" style="width:calc(100vw - 200px);margin-left:200px;min-height:100vh;overflow-x:hidden;background:#f3f4f6;display:flex;flex-direction:column;transition:width .22s cubic-bezier(.4,0,.2,1);">
+    <header>
+      <h1 class="page-title"><i class="fas fa-balance-scale"></i> Compatibilidade de Vagas</h1>
+    </header>
+    <main>
+      <div class="max-w-6xl mx-auto mt-6 mb-2">
+        <div class="bg-white/90 rounded-xl shadow border border-blue-100 p-4 flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
+          <div class="flex-1 max-w-md w-full">
+            <label class="block text-xs font-semibold mb-1 text-blue-900 tracking-wide uppercase">Buscar vaga</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400"><i class="fas fa-search"></i></span>
+              <input id="comboBuscaVaga" type="text" placeholder="Digite o nome da vaga ou empresa..." class="w-full pl-10 pr-4 py-2 rounded-full border border-blue-200 bg-blue-50 text-base placeholder-blue-300 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition shadow-sm" autocomplete="off" />
+              <div id="comboVagaDropdown" class="absolute z-20 left-0 right-0 mt-2 bg-white border border-blue-100 rounded-xl shadow-lg max-h-60 overflow-y-auto hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-6xl mx-auto px-2 md:px-6">
+        <hr class="my-6 border-blue-100">
+        <div id="compatibilidade-content"></div>
+      </div>
+    </main>
+  </div>
+  <script src="assets/js/common.js"></script>
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+    sidebarToggle.onclick = function() {
+      sidebar.classList.toggle('minimized');
+      document.querySelector('.main-content').style.width = sidebar.classList.contains('minimized') ? 'calc(100vw - 60px)' : 'calc(100vw - 200px)';
+      document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('minimized') ? '60px' : '200px';
+      sidebarToggle.title = sidebar.classList.contains('minimized') ? 'Expandir menu' : 'Recolher menu';
+      sidebarToggleIcon.style.transform = sidebar.classList.contains('minimized') ? 'rotate(180deg)' : 'rotate(0deg)';
+    };
+
+    let vagasOriginais = [];
+    let vagasFiltradas = [];
+    let vagaSelecionada = null;
+    const comboInput = document.getElementById('comboBuscaVaga');
+    const comboDropdown = document.getElementById('comboVagaDropdown');
+
+    async function carregarVagas() {
+      try {
+        const resp = await fetch('api/get_jobs.php');
+        const data = await resp.json();
+        vagasOriginais = Array.isArray(data) ? data : [];
+        renderComboVagas('');
+      } catch (err) {
+        comboDropdown.innerHTML = '<div class="p-3 text-red-600">Erro ao carregar vagas</div>';
+        comboDropdown.classList.remove('hidden');
+      }
+    }
+    function renderComboVagas(filtro = '') {
+      vagasFiltradas = vagasOriginais.filter(v =>
+        v.title.toLowerCase().includes(filtro.toLowerCase()) ||
+        (v.company && v.company.toLowerCase().includes(filtro.toLowerCase()))
+      );
+      if (!vagasFiltradas.length) {
+        comboDropdown.innerHTML = '<div class="p-3 text-gray-500">Nenhuma vaga encontrada</div>';
+        comboDropdown.classList.remove('hidden');
+        return;
+      }
+      comboDropdown.innerHTML = vagasFiltradas.map((v, i) =>
+        `<div class="px-4 py-2 cursor-pointer hover:bg-blue-50 flex items-center gap-2" data-idx="${i}"><i class="fas fa-briefcase text-blue-400"></i> <span class="font-semibold">${v.title}</span> <span class="text-xs text-gray-500 ml-2">(${v.company})</span></div>`
+      ).join('');
+      comboDropdown.classList.remove('hidden');
+    }
+    comboInput.oninput = function() {
+      renderComboVagas(this.value);
+    };
+    comboInput.onfocus = function() {
+      renderComboVagas(this.value);
+    };
+    comboInput.onblur = function() {
+      setTimeout(()=>comboDropdown.classList.add('hidden'), 180);
+    };
+    comboInput.onkeydown = function(e) {
+      if (e.key === 'Enter' && vagasFiltradas.length) {
+        selecionarVagaCombo(0);
+      }
+    };
+    comboDropdown.onclick = function(e) {
+      const el = e.target.closest('[data-idx]');
+      if (el) selecionarVagaCombo(Number(el.dataset.idx));
+    };
+    function selecionarVagaCombo(idx) {
+      const vaga = vagasFiltradas[idx];
+      if (!vaga) return;
+      vagaSelecionada = vaga;
+      comboInput.value = vaga.title + ' (' + vaga.company + ')';
+      comboDropdown.classList.add('hidden');
+      carregarCompatibilidade(vaga.id);
+    }
+    carregarVagas();
+
+    async function carregarCompatibilidade(vagaId) {
+      const container = document.getElementById('compatibilidade-content');
+      container.innerHTML = '<div class="py-8 text-center text-accent"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Carregando análise de compatibilidade...</div>';
+      try {
+        const resp = await fetch(`api/compatibilidade_vaga.php?vaga_id=${vagaId}`);
+        const data = await resp.json();
+        const lista = (data.compatibilidade || []).filter(c => c.pontuacao > 0);
+        if (!Array.isArray(lista) || !lista.length) {
+          container.innerHTML = '<div class="text-center text-gray-500 py-8">Nenhum candidato inscrito ou compatível.</div>';
+          return;
+        }
+        container.innerHTML = lista.map((c, i) => {
+          // Análise "IA"
+          let analise = '';
+          let analiseCor = '';
+          let analiseIcon = '';
+          if (c.pontuacao >= 6) {
+            analise = 'Alta compatibilidade';
+            analiseCor = 'text-green-800 bg-green-100 border border-green-300 shadow-sm';
+            analiseIcon = '<i class="fas fa-robot"></i>';
+          } else if (c.pontuacao >= 3) {
+            analise = 'Compatível';
+            analiseCor = 'text-blue-800 bg-blue-100 border border-blue-300 shadow-sm';
+            analiseIcon = '<i class="fas fa-thumbs-up"></i>';
+          } else if (c.pontuacao > 0) {
+            analise = 'Pouco compatível';
+            analiseCor = 'text-yellow-800 bg-yellow-100 border border-yellow-300 shadow-sm';
+            analiseIcon = '<i class="fas fa-exclamation-circle"></i>';
+          } else {
+            analise = 'Não compatível';
+            analiseCor = 'text-red-800 bg-red-100 border border-red-300 shadow-sm';
+            analiseIcon = '<i class="fas fa-times-circle"></i>';
+          }
+          return `
+          <div class="candidato-card">
+            <div class="candidato-col nome">${c.candidato_nome}${i === 0 ? '<span class="candidato-card-medalha bg-yellow-400 text-white">#1 Ouro</span>' : i === 1 ? '<span class="candidato-card-medalha bg-gray-400 text-white">#2 Prata</span>' : i === 2 ? '<span class="candidato-card-medalha bg-orange-400 text-white">#3 Bronze</span>' : ''}</div>
+            <div class="candidato-col pontos"><div class="candidato-card-bar"><div class="candidato-card-bar-inner" style="width:${Math.min(c.pontuacao * 12, 100)}%"></div></div><span style='margin-left:6px;font-weight:600;color:#2563eb;'>${c.pontuacao} pts</span></div>
+            <div class="candidato-col analise"><span class="candidato-card-analise ${analiseCor}">${analiseIcon} ${analise}</span></div>
+            <div class="candidato-col btn"><button class="ver-detalhes-candidato bg-accent text-white font-semibold" data-candidato='${encodeURIComponent(JSON.stringify(c))}' title="Ver detalhes"><i class="fas fa-eye"></i></button></div>
+          </div>
+          `;
+        }).join('');
+        container.querySelectorAll('.ver-detalhes-candidato').forEach(btn => {
+          btn.onclick = function() {
+            const cand = JSON.parse(decodeURIComponent(this.dataset.candidato));
+            showCandidatoDetalhesModal(cand);
+          };
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="text-center text-red-600 py-8">Erro ao carregar compatibilidade: ${err.message}</div>`;
+      }
+    }
+
+    function showCandidatoDetalhesModal(c) {
+      let modal = document.getElementById('candidatoDetalhesModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'candidatoDetalhesModal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(30,41,59,0.22)';
+        modal.style.backdropFilter = 'blur(6px)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `<div class='modal-box animate-modal modal-elevate' style='background:linear-gradient(120deg,#f8fbff 80%,#e0e7ef 120%);max-width:650px;width:98vw;height:auto;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 16px 64px #2563eb33,0 2px 12px #0002;border-radius:32px;position:relative;overflow:hidden;border:2.5px solid #2563eb;transition:box-shadow .22s;'>
+        <div style='background:linear-gradient(90deg,#2563eb 60%,#38bdf8 120%);color:#fff;padding:26px 44px 18px 44px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2;box-shadow:0 4px 16px #2563eb33;'>
+          <h2 style='font-size:1.32rem;font-weight:800;margin:0;letter-spacing:0.01em;display:flex;align-items:center;gap:10px;'><i class="fas fa-user-circle"></i> Detalhes do Candidato</h2>
+          <button id='closeCandidatoDetalhesModal' style='background:rgba(255,255,255,0.22);border:none;border-radius:50%;width:48px;height:48px;font-size:30px;cursor:pointer;color:#fff;transition:background 0.18s,box-shadow 0.18s;box-shadow:0 2px 8px #2563eb22;display:flex;align-items:center;justify-content:center;position:absolute;top:18px;right:18px;'><i class="fas fa-times"></i></button>
+        </div>
+        <div style='flex:1;overflow-y:auto;padding:36px 44px;display:flex;flex-direction:column;gap:22px;'>
+          <div style='display:flex;align-items:center;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-id-badge"></i> Nome:</span><br><span style='font-size:1.13em;'>${c.candidato_nome || '-'}</span></div>
+          <div style='border-bottom:1px solid #e0e7ef;padding-bottom:10px;display:flex;align-items:center;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-envelope"></i> E-mail:</span><br><span style='font-size:1.13em;'>${c.candidato_email || '-'}</span></div>
+          <div style='display:flex;align-items:center;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-graduation-cap"></i> Escolaridade:</span><br>${c.escolaridade_candidato || '-'}</div>
+          <div style='display:flex;align-items:center;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-bullseye"></i> Área de Interesse:</span><br>${c.area_interesse || '-'}</div>
+          <div style='display:flex;align-items:flex-start;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-briefcase"></i> Experiências:</span><br><span style='white-space:pre-line;'>${c.experiencias || '-'}</span></div>
+          <div style='display:flex;align-items:flex-start;gap:10px;'><span style='color:#2563eb;font-weight:700;'><i class="fas fa-certificate"></i> Qualificações:</span><br>${c.qualificacoes || '-'}</div>
+          <div class='mt-2 text-xs text-gray-500'><b>Match:</b> ${c.match.map(m => `<span class='inline-block bg-blue-100 text-blue-800 rounded px-2 py-0.5 mr-1 mb-1'>${m.palavra} <small>(${m.onde})</small></span>`).join('') || 'Nenhum'}</div>
+        </div>
+      </div>`;
+      const modalBox = modal.querySelector('.modal-box');
+      // Animação de entrada
+      modalBox.style.opacity = '0';
+      modalBox.style.transform = 'translateY(48px) scale(0.97)';
+      setTimeout(() => {
+        modalBox.style.transition = 'all .28s cubic-bezier(.4,0,.2,1)';
+        modalBox.style.opacity = '1';
+        modalBox.style.transform = 'translateY(0) scale(1)';
+      }, 10);
+      modalBox.onmouseenter = () => { modalBox.style.boxShadow = '0 24px 80px #2563eb44,0 2px 12px #0002'; };
+      modalBox.onmouseleave = () => { modalBox.style.boxShadow = '0 16px 64px #2563eb33,0 2px 12px #0002'; };
+      modal.onclick = function(e) {
+        if (e.target === modal || e.target.id === 'closeCandidatoDetalhesModal') modal.remove();
+      };
+    }
+  </script>
+  <style>
+    .sidebar.minimized { width: 60px !important; }
+    .sidebar.minimized .sidebar-text, .sidebar.minimized #sidebarLogo { opacity: 0; pointer-events: none; width:0; height:0; }
+    .sidebar.minimized nav a { justify-content: center; }
+    .sidebar nav a.sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      border-radius: 10px;
+      color: #e0e7ef;
+      font-size: 1.05rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      transition: background 0.22s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+      margin-bottom: 4px;
+      box-shadow: none;
+      min-width: 40px;
+      justify-content: flex-start;
+      white-space: nowrap;
+      text-shadow: 0 1px 4px #1e293b44;
+    }
+    .sidebar nav a.sidebar-link i {
+      font-size: 1.15em;
+      opacity: 0.88;
+      min-width: 20px;
+      text-align: center;
+      transition: color .18s, transform .18s;
+    }
+    .sidebar nav a.sidebar-link.active, .sidebar nav a.sidebar-link:hover {
+      background: linear-gradient(90deg,#2563eb 60%,#1e40af 120%);
+      color: #fff;
+      box-shadow: 0 4px 16px #2563eb33;
+      transform: translateX(2px) scale(1.04);
+    }
+    .sidebar nav a.sidebar-link.active {
+      font-weight: 700;
+      border-left: 4px solid #fff;
+      color: #fff;
+    }
+    .sidebar nav a.sidebar-link:last-child {
+      margin-top: 12px;
+      color: #fca5a5;
+      font-weight: 600;
+    }
+    .sidebar nav a.sidebar-link:last-child:hover {
+      background: #fff1f2;
+      color: #dc2626;
+    }
+    #sidebarLogo {
+      max-width: 110px;
+      max-height: 60px;
+      display: block;
+      filter: drop-shadow(0 2px 8px #2563eb55);
+      transition: opacity .18s;
+    }
+    #sidebarToggle:hover { background: #e0e7ef; }
+    .sidebar.minimized #sidebarToggleIcon { transform: rotate(180deg); }
+    .page-title {
+      color: #1e293b;
+      font-size: 2.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5em;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-separator {
+      width: 80%;
+      height: 1.5px;
+      background: linear-gradient(90deg,#2563eb33,#fff0,#2563eb33);
+      margin: 18px auto 10px auto;
+      border-radius: 2px;
+      box-shadow: 0 1px 4px #2563eb22;
+    }
+    .sidebar-powered {
+      margin-top: auto;
+      padding: 10px 0 6px 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #a3adc2;
+      opacity: 0.65;
+      letter-spacing: 0.01em;
+      font-weight: 400;
+      user-select: none;
+    }
+    .sidebar-powered span {
+      color: #2563eb;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    /* Barra de rolagem customizada para modal */
+    .modal-box::-webkit-scrollbar, .modal-box > div[style*='overflow-y:auto']::-webkit-scrollbar {
+      width: 7px;
+      background: #e0e7ef;
+      border-radius: 8px;
+    }
+    .modal-box::-webkit-scrollbar-thumb, .modal-box > div[style*='overflow-y:auto']::-webkit-scrollbar-thumb {
+      background: #2563eb33;
+      border-radius: 8px;
+    }
+    .modal-elevate { transition: box-shadow .22s; }
+    .modal-elevate:hover { box-shadow: 0 24px 80px #2563eb44,0 2px 12px #0002; }
+    .candidato-card {
+      width: 100% !important;
+      max-width: 100%;
+      margin: 0 0 22px 0 !important;
+      left: 0;
+      right: 0;
+      transform: none;
+      border-radius: 12px !important;
+      box-shadow: 0 2px 12px #2563eb11;
+      background: #fff;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      transition: box-shadow .18s, transform .18s;
+      border: 1.2px solid #dbeafe;
+      position: relative;
+      min-height: 54px;
+      overflow: hidden;
+      gap: 0;
+    }
+    .candidato-card:hover {
+      box-shadow: 0 6px 24px #2563eb22;
+      transform: scale(1.01);
+    }
+    .candidato-col {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      font-size: 1.01rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      height: 54px;
+      padding: 0 10px;
+      flex: 1 1 0;
+    }
+    .candidato-col.nome { font-weight: 700; color: #1e293b; flex: 2 1 220px; min-width: 120px; }
+    .candidato-col.pontos { color: #2563eb; font-weight: 700; min-width: 90px; justify-content: flex-start; flex: 1 1 120px; }
+    .candidato-col.analise { min-width: 120px; flex: 1 1 120px; justify-content: center; }
+    .candidato-col.btn { flex: 0 0 44px; min-width: 44px; max-width: 44px; justify-content: flex-end; }
+    .candidato-card-medalha { font-size: 0.93rem; padding: 2px 10px; border-radius: 10px; font-weight: 700; margin-left: 8px; }
+    .candidato-card-analise { font-size: 0.98rem; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 2px 12px; border-radius: 10px; box-shadow: 0 1px 4px #2563eb11; }
+    .candidato-card-bar { width: 60px; height: 7px; background: #e0e7ef; border-radius: 8px; overflow: hidden; margin: 0 8px 0 0; }
+    .candidato-card-bar-inner { height: 100%; border-radius: 8px; background: linear-gradient(90deg,#2563eb,#38bdf8); transition: width .22s; }
+    .ver-detalhes-candidato {
+      font-size: 1rem;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border-radius: 6px;
+      font-weight: 700;
+      box-shadow: 0 1px 6px #2563eb22;
+      background: linear-gradient(90deg,#2563eb,#2563ebcc);
+      transition: background .18s, box-shadow .18s, transform .18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ver-detalhes-candidato i { font-size: 1em; }
+    .ver-detalhes-candidato:hover {
+      background: linear-gradient(90deg,#2563eb,#38bdf8);
+      box-shadow: 0 2px 12px #2563eb33;
+      transform: scale(1.12);
+    }
+    @media (max-width: 1100px) {
+      .candidato-col.nome { max-width: 120px; }
+      .candidato-col.email { max-width: 90px; }
+      .candidato-col.match { max-width: 120px; }
+    }
+    @media (max-width: 900px) {
+      .candidato-card { flex-direction: column; align-items: flex-start; min-height: 0; padding: 0 6px; }
+      .candidato-col { padding: 6px 10px; height: auto; width: 100%; }
+      .candidato-col.btn { justify-content: flex-start; }
+    }
+    #compatibilidade-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 12px;
+      width: 100%;
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .candidato-card {
+      width: 100% !important;
+      max-width: 100%;
+      margin: 0 0 22px 0 !important;
+    }
+    .candidato-col {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      font-size: 1.01rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      height: 54px;
+      padding: 0 10px;
+      flex: 1 1 0;
+    }
+    .candidato-col.btn { flex: 0 0 44px; min-width: 44px; max-width: 44px; justify-content: flex-end; }
+    .candidato-card-medalha { font-size: 0.93rem; padding: 2px 10px; border-radius: 10px; font-weight: 700; margin-left: 8px; }
+    @media (max-width: 900px) {
+      #compatibilidade-content { margin: 0 -8px; }
+    }
+  </style>
+</body>
+</html> 

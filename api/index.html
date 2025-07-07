@@ -1,0 +1,4196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="icon.ico" />
+
+  <title>Formatar RH | RHControl</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    // Verifica se o Chart.js está carregado
+    function isChartJsLoaded() {
+      return typeof Chart !== 'undefined';
+    }
+
+    // Aguarda o carregamento do Chart.js
+    function waitForChartJs(callback, maxAttempts = 10) {
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (isChartJsLoaded()) {
+          clearInterval(checkInterval);
+          callback();
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error('Chart.js não carregou após várias tentativas');
+          alert('Erro ao carregar Chart.js. Por favor, recarregue a página.');
+        }
+      }, 500);
+    }
+
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#1e293b',
+            accent: '#2563eb',
+            secondary: '#64748b',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    };
+
+    // Inicialização após o carregamento da página
+    window.addEventListener('load', function() {
+      waitForChartJs(() => {
+        console.log('Chart.js carregado com sucesso');
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+          showMainContent();
+          statsTabButton.click();
+        } else {
+          showLogin();
+        }
+      });
+    });
+  </script>
+  <style>
+    body {
+      background-color: #f3f4f6;
+    }
+    .modal {
+      transform: translateY(-50px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .modal.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    tr:hover {
+      background-color: #f1f5f9;
+    }
+    input:focus,
+    textarea:focus,
+    select:focus {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+      outline: none;
+    }
+    .sidebar {
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar.hidden {
+      transform: translateX(-100%);
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+      }
+      .hamburger {
+        display: block;
+      }
+    }
+    .hamburger {
+      display: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: #1e293b;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .list-item {
+      border-left: 4px solid #2563eb;
+      padding-left: 1rem;
+    }
+
+    /* Estilos para a tabela de compatibilidade */
+    #matches-tab {
+      font-size: 0.875rem; /* 14px */
+    }
+    #matches-tab h2 {
+      font-size: 1.125rem; /* 18px */
+    }
+    #matches-tab .view-job-details {
+      font-size: 0.9375rem; /* 15px */
+    }
+    #matches-tab .company-name {
+      font-size: 0.75rem; /* 12px */
+    }
+    #matches-tab .candidate-name {
+      font-size: 0.8125rem; /* 13px */
+    }
+    #matches-tab .score-badge {
+      font-size: 0.75rem; /* 12px */
+      padding: 0.125rem 0.5rem;
+    }
+    #matches-tab .rank-number {
+      width: 1.25rem;
+      height: 1.25rem;
+      font-size: 0.6875rem; /* 11px */
+    }
+    #matches-tab .show-more-btn {
+      font-size: 0.75rem; /* 12px */
+    }
+    #matches-tab .total-badge {
+      font-size: 0.75rem; /* 12px */
+      padding: 0.125rem 0.5rem;
+    }
+  </style>
+</head>
+<body class="font-sans text-navy min-h-screen flex flex-col items-center p-4 md:p-6">
+  <!-- Login Container -->
+  <div id="login-container" class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+    <h2 class="text-2xl font-semibold mb-6 text-center text-navy">Acesso ao Sistema</h2>
+    <form id="login-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1 text-gray-700">E-mail</label>
+        <input
+          type="email"
+          id="login-email"
+          placeholder="Digite seu e-mail"
+          required
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1 text-gray-700">Senha</label>
+        <input
+          type="password"
+          id="login-password"
+          placeholder="Digite sua senha"
+          required
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+        />
+      </div>
+      <div id="login-error" class="text-red-600 text-sm hidden">E-mail ou senha inválidos.</div>
+      <button
+        type="submit"
+        class="w-full bg-accent text-white py-2.5 px-6 rounded-lg font-medium hover:bg-blue-700 transition"
+      >
+        Entrar
+      </button>
+    </form>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content" class="hidden w-full max-w-7xl flex flex-col items-center">
+    <!-- Header -->
+    <header class="w-full bg-navy text-white rounded-2xl mb-6 shadow-lg relative overflow-hidden">
+      <div class="flex flex-col md:flex-row items-center justify-between p-6">
+        <div class="flex items-center">
+          <button id="hamburger" class="hamburger mr-4"><i class="fas fa-bars"></i></button>
+          <img
+            src="contrhol.png"
+            alt="Formatar RH Logo"
+            class="w-20 md:w-28 h-auto"
+          />
+        </div>
+        <div class="flex flex-col justify-center text-center md:text-left mt-4 md:mt-0">
+          
+        </div>
+        <button
+          id="logout-button"
+          class="bg-gray-200 text-sm text-navy py-2 px-2 rounded-lg font-medium hover:bg-gray-300 transition"
+        >
+          Sair
+        </button>
+      </div>
+    </header>
+
+    <!-- Sidebar and Content -->
+    <div class="flex w-full">
+      <!-- Sidebar -->
+      <div
+        id="sidebar"
+        class="sidebar fixed top-0 left-0 h-full w-64 bg-navy text-white shadow-lg z-20 md:static md:translate-x-0"
+      >
+        <div class="p-6">
+          <h2 class="text-xl font-semibold mb-6">Menu</h2>
+          <nav class="space-y-2">
+            <button
+              id="statsTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="stats-tab"
+            >
+              <i class="fas fa-chart-bar mr-2"></i> Dashboard
+            </button>
+            <button
+              id="resumeTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="resume-tab"
+            >
+              <i class="fas fa-file-alt mr-2"></i> Visualizar Currículos
+            </button>
+            <button
+              id="jobsTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="jobs-tab"
+            >
+              <i class="fas fa-briefcase mr-2"></i> Cadastrar Vagas
+            </button>
+            <button
+              id="matchesTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="matches-tab"
+            >
+              <i class="fas fa-chart-line mr-2"></i> Análise de Compatibilidade
+            </button>
+            <button
+              id="inscritosTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="inscritos-tab"
+            >
+              <i class="fas fa-users mr-2"></i> Inscritos por Vaga
+            </button>
+            <button
+              id="processoSeletivoTabButton"
+              class="tab-button w-full text-left py-2 px-4 rounded-lg hover:bg-accent/80 transition flex items-center"
+              data-tab="processo-seletivo-tab"
+            >
+              <i class="fas fa-tasks mr-2"></i> Processo Seletivo
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <main id="main-content-area" class="flex-1 ml-0 md:ml-8 p-6 bg-white rounded-2xl shadow-lg">
+        <!-- Stats Tab Content -->
+        <div id="stats-tab" class="tab-content hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Dashboard de Currículos</h2>
+            <div class="flex gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Início</label>
+                <input
+                  type="date"
+                  id="statsDataInicio"
+                  class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Fim</label>
+                <input
+                  type="date"
+                  id="statsDataFim"
+                  class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                />
+              </div>
+              <div class="self-end">
+                <button
+                  id="statsFilter"
+                  class="bg-accent text-white py-2 px-6 rounded-lg font-medium hover:bg-blue-700 transition"
+                >
+                  Filtrar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Total de Currículos -->
+            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-blue-100 text-sm">Total de Currículos</p>
+                  <h3 id="totalCurriculos" class="text-3xl font-bold mt-1">0</h3>
+                </div>
+                <div class="bg-white/20 rounded-full p-3">
+                  <i class="fas fa-file-alt text-2xl"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Currículos Hoje -->
+            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-green-100 text-sm">Currículos Hoje</p>
+                  <h3 id="curriculosHoje" class="text-3xl font-bold mt-1">0</h3>
+                </div>
+                <div class="bg-white/20 rounded-full p-3">
+                  <i class="fas fa-calendar-day text-2xl"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vagas Abertas -->
+            <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-yellow-100 text-sm">Vagas Abertas</p>
+                  <h3 id="vagasAbertas" class="text-3xl font-bold mt-1">0</h3>
+                  <p id="posicoesAbertas" class="text-sm text-yellow-100 mt-1">0 posições disponíveis</p>
+                </div>
+                <div class="bg-white/20 rounded-full p-3">
+                  <i class="fas fa-door-open text-2xl"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vagas Fechadas -->
+            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-purple-100 text-sm">Vagas Fechadas</p>
+                  <h3 id="vagasFechadasTotal" class="text-3xl font-bold mt-1">0</h3>
+                  <p id="mediaFechamento" class="text-sm text-purple-100 mt-1">Média de 0 dias para fechamento</p>
+                </div>
+                <div class="bg-white/20 rounded-full p-3">
+                  <i class="fas fa-door-closed text-2xl"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Status das Vagas -->
+            <div class="bg-white rounded-xl p-6 shadow-lg">
+              <h3 class="text-lg font-semibold mb-4">Status das Vagas</h3>
+              <canvas id="statusVagasChart" class="w-full"></canvas>
+            </div>
+
+            <!-- Evolução de Vagas -->
+            <div class="bg-white rounded-xl p-6 shadow-lg">
+              <h3 class="text-lg font-semibold mb-4">Evolução de Vagas por Mês</h3>
+              <canvas id="evolucaoVagasChart" class="w-full"></canvas>
+            </div>
+
+            <!-- Top Áreas de Interesse -->
+            <div class="bg-white rounded-xl p-6 shadow-lg">
+              <h3 class="text-lg font-semibold mb-4">Top Áreas de Interesse</h3>
+              <div id="areasInteresse" class="space-y-4"></div>
+            </div>
+
+            <!-- Top Áreas com Mais Vagas -->
+            <div class="bg-white rounded-xl p-6 shadow-lg">
+              <h3 class="text-lg font-semibold mb-4">Top Áreas com Mais Vagas</h3>
+              <div id="areasVagas" class="space-y-4"></div>
+            </div>
+
+            <!-- Últimas Vagas Fechadas -->
+            <div class="bg-white rounded-xl p-6 shadow-lg col-span-2">
+              <h3 class="text-lg font-semibold mb-4">Últimas Vagas Fechadas</h3>
+              <div id="vagasFechadas" class="space-y-4"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resume Tab Content -->
+        <div id="resume-tab" class="tab-content hidden">
+          <h2 class="text-2xl font-semibold mb-4">Currículos</h2>
+          <div class="space-y-4">
+            <!-- Barra de pesquisa -->
+            <div class="flex-1">
+              <label class="block text-sm font-medium mb-1 text-gray-700">Pesquisar Currículos</label>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Pesquisar por nome, e-mail ou área de interesse..."
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+
+            <!-- Filtros -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Início</label>
+                <input
+                  type="date"
+                  id="resumeDataInicio"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Data Fim</label>
+                <input
+                  type="date"
+                  id="resumeDataFim"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Área de Interesse</label>
+                <select
+                  id="areaFilter"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                >
+                  <option value="">Todas as áreas</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Escolaridade</label>
+                <select
+                  id="escolaridadeFilter"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                >
+                  <option value="">Todas</option>
+                  <option value="Ensino Fundamental">Ensino Fundamental</option>
+                  <option value="Ensino Médio">Ensino Médio</option>
+                  <option value="Ensino Técnico">Ensino Técnico</option>
+                  <option value="Ensino Superior">Ensino Superior</option>
+                  <option value="Pós-graduação">Pós-graduação</option>
+                  <option value="Mestrado">Mestrado</option>
+                  <option value="Doutorado">Doutorado</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Botões de ação -->
+            <div class="flex justify-between items-center">
+              <button
+                id="applyFilters"
+                class="bg-accent text-white py-2.5 px-6 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <i class="fas fa-filter"></i> Aplicar Filtros
+              </button>
+              <button
+                id="downloadFiltered"
+                class="bg-secondary text-white py-2.5 px-6 rounded-lg font-medium hover:bg-gray-600 transition flex items-center gap-2"
+                disabled
+              >
+                <i class="fas fa-download"></i> Baixar Currículos Filtrados
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-3 font-semibold text-gray-700">Data</th>
+                  <th class="p-3 font-semibold text-gray-700">Nome</th>
+                  <th class="p-3 font-semibold text-gray-700">E-mail</th>
+                  <th class="p-3 font-semibold text-gray-700">Escolaridade</th>
+                  <th class="p-3 font-semibold text-gray-700">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="resumeTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Jobs Tab Content -->
+        <div id="jobs-tab" class="tab-content hidden">
+          <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Vagas de Emprego</h2>
+            <button
+              id="createJobButton"
+              class="bg-accent text-white py-2 px-6 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+            >
+              <i class="fas fa-plus"></i> Criar Nova Vaga
+            </button>
+          </div>
+
+          <div class="bg-white rounded-xl p-6 shadow-lg mb-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <i class="fas fa-filter text-accent"></i> Filtros
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Pesquisar</label>
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="jobSearchInput"
+                    placeholder="Buscar por empresa ou título da vaga..."
+                    class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                  />
+                  <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-gray-700">Status da Vaga</label>
+                <select
+                  id="jobStatusFilter"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                >
+                  <option value="">Todos os status</option>
+                  <option value="Em Divulgação">Em Divulgação</option>
+                  <option value="Suspensa">Suspensa</option>
+                  <option value="Aguardando Retorno">Aguardando Retorno</option>
+                  <option value="Fechada">Fechada</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600" id="jobFilterStats">
+              Mostrando 0 vagas
+            </div>
+          </div>
+
+          <div id="jobPostingsList" class="grid gap-4"></div>
+        </div>
+
+        <!-- Matches Tab Content -->
+        <div id="matches-tab" class="tab-content hidden">
+          <h2 class="text-xl font-semibold mb-4">Análise de Compatibilidade</h2>
+          <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-gradient-to-r from-accent/10 to-accent/5">
+                  <th class="p-3 font-semibold text-gray-700">Vaga</th>
+                  <th class="p-3 font-semibold text-gray-700">Ranking de Candidatos (≥ 40%)</th>
+                  <th class="p-3 font-semibold text-gray-700 text-center w-20">Total</th>
+                </tr>
+              </thead>
+              <tbody id="matchesTableBody" class="text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Inscritos Tab Content -->
+        <div id="inscritos-tab" class="tab-content hidden">
+          <h2 class="text-2xl font-semibold mb-4">Inscritos por Vaga</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vaga</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prazo</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dias Restantes</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total de Inscritos</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="inscritosTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Linhas serão adicionadas via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div id="loadingInscritos" class="text-center py-4">Carregando inscritos...</div>
+        </div>
+
+        <!-- Processo Seletivo Tab Content -->
+        <div id="processo-seletivo-tab" class="tab-content hidden">
+          <h2 class="text-2xl font-semibold mb-4">Gerenciamento do Processo Seletivo</h2>
+          <p class="text-gray-600 mb-6">Aqui você poderá gerenciar os candidatos em cada etapa do processo seletivo para as vagas abertas.</p>
+          <div id="processo-seletivo-container" class="mt-1">
+            <div class="mb-6">
+              <label for="vagaFilterProcessoSeletivo" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Vaga:</label>
+              <select id="vagaFilterProcessoSeletivo" class="w-full md:w-1/2 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50">
+                <option value="">Todas as Vagas</option>
+              </select>
+            </div>
+            <div id="processo-seletivo-content-area" class="space-y-8"></div>
+          </div>
+          <div id="loadingProcessoSeletivo" class="text-center py-4" style="display: none;">Carregando dados do processo seletivo...</div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- Resume Details Modal -->
+     <div id="detailsModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-30 hidden">
+      <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+        <!-- Modern Header -->
+        <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+          <div class="relative bg-gradient-to-r from-accent via-blue-700 to-blue-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+        <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+          <i class="fas fa-user-tie text-white text-4xl"></i>
+        </div>
+        <div>
+          <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Detalhes do Currículo</h2>
+          <p class="text-blue-100 text-sm font-medium">Informações completas do candidato</p>
+        </div>
+        <button
+          id="closeModal"
+          class="absolute top-4 right-4 bg-white/80 hover:bg-white text-accent rounded-full p-2 shadow-lg transition"
+          title="Fechar"
+          style="z-index:20"
+        >
+          <i class="fas fa-times text-xl"></i>
+        </button>
+          </div>
+        </div>
+        <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+          <div id="modalContent" class="space-y-4"></div>
+          <div class="mt-8">
+        <h3 class="text-lg font-semibold mb-3 text-accent flex items-center gap-2">
+          <i class="fas fa-star text-yellow-400"></i> Avaliações
+        </h3>
+        <div id="evaluationsList" class="space-y-3 mb-4"></div>
+        <label class="block text-sm font-medium mb-1 text-gray-700">Adicionar Avaliação</label>
+        <textarea
+          id="evaluationInput"
+          rows="3"
+          placeholder="Escreva sua avaliação sobre o candidato..."
+          class="w-full border border-accent/30 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+        ></textarea>
+        <button
+          id="saveEvaluation"
+          class="mt-3 bg-gradient-to-r from-accent to-blue-700 text-white py-2 px-6 rounded-lg font-semibold shadow hover:from-blue-700 hover:to-accent transition"
+        >
+          <i class="fas fa-save mr-2"></i>Salvar Avaliação
+        </button>
+          </div>
+          <div class="flex flex-col sm:flex-row justify-end mt-6 gap-3">
+        <button
+          id="backToCandidates"
+          class="bg-gray-500 text-white py-2 px-6 rounded-lg font-semibold shadow hover:bg-gray-600 transition flex items-center gap-2"
+        >
+          <i class="fas fa-arrow-left"></i> Voltar para Lista
+        </button>
+        <button
+          id="downloadProfile"
+          class="bg-secondary text-white py-2 px-6 rounded-lg font-semibold shadow hover:bg-gray-600 transition flex items-center gap-2"
+        >
+          <i class="fas fa-download"></i> Baixar Ficha
+        </button>
+          </div>
+        </div>
+      </div>
+        </div>
+        <style>
+      /* Custom scrollbar for modal */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #2563eb55;
+        border-radius: 8px;
+      }
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #2563eb55 transparent;
+      }
+        </style>
+        <script>
+      // Fecha o modal ao clicar fora da caixa
+      document.getElementById('detailsModal').addEventListener('mousedown', function (e) {
+        const modalBox = this.querySelector('.modal');
+        if (!modalBox.contains(e.target)) {
+          modalBox.classList.remove('show');
+          setTimeout(() => this.classList.add('hidden'), 300);
+        }
+      });
+        </script>
+
+    <!-- Job Creation Modal -->
+    <div id="jobCreationModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-30 hidden">
+      <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+        <!-- Modern Header -->
+        <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+          <div class="relative bg-gradient-to-r from-accent via-blue-700 to-blue-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+            <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+              <i class="fas fa-briefcase text-white text-4xl"></i>
+            </div>
+            <div>
+              <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Criar Nova Vaga</h2>
+              <p class="text-blue-100 text-sm font-medium">Preencha os dados da vaga de emprego</p>
+            </div>
+            <button
+              id="closeJobCreationModal"
+              class="absolute top-4 right-4 bg-white/80 hover:bg-white text-accent rounded-full p-2 shadow-lg transition"
+              title="Fechar"
+              style="z-index:20"
+            >
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+          <form id="jobCreationForm" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Nome da Empresa</label>
+              <input
+                type="text"
+                id="jobCompany"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Título da Vaga</label>
+              <input
+                type="text"
+                id="jobTitle"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Descrição</label>
+              <textarea
+                id="jobDescription"
+                rows="4"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Requisitos</label>
+              <textarea
+                id="jobRequirements"
+                rows="4"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Palavras-chave</label>
+              <textarea
+                id="jobKeywords"
+                rows="2"
+                placeholder="Ex: React, JavaScript, Front-end"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Localização</label>
+              <input
+                type="text"
+                id="jobLocation"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Faixa Salarial</label>
+              <input
+                type="text"
+                id="jobSalaryRange"
+                placeholder="Ex: R$ 3.000,00 - R$ 5.000,00"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Prazo de Inscrição</label>
+              <input
+                type="date"
+                id="jobDeadline"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Status</label>
+              <select
+                id="jobStatus"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              >
+                <option value="Em Divulgação">Em Divulgação</option>
+                <option value="Suspensa">Suspensa</option>
+                <option value="Aguardando Retorno">Aguardando Retorno</option>
+                <option value="Fechada">Fechada</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Quantidade de Vagas</label>
+              <input
+                type="number"
+                id="jobQuantity"
+                min="1"
+                value="1"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Data de Fechamento (opcional)</label>
+              <input
+                type="date"
+                id="jobClosingDate"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div class="flex flex-col sm:flex-row justify-end mt-6 gap-3">
+              <button
+                type="submit"
+                class="bg-gradient-to-r from-accent to-blue-700 text-white py-2 px-6 rounded-lg font-semibold shadow hover:from-blue-700 hover:to-accent transition flex items-center gap-2"
+              >
+                <i class="fas fa-save"></i> Criar Vaga
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <style>
+    /* Custom scrollbar for modal */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #2563eb55;
+      border-radius: 8px;
+    }
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #2563eb55 transparent;
+    }
+    </style>
+    <script>
+    // Fecha o modal ao clicar fora da caixa
+    document.getElementById('jobCreationModal').addEventListener('mousedown', function (e) {
+      const modalBox = this.querySelector('.modal');
+      if (!modalBox.contains(e.target)) {
+        modalBox.classList.remove('show');
+        setTimeout(() => this.classList.add('hidden'), 300);
+      }
+    });
+    </script>
+
+    <!-- Job Edit Modal -->
+    <div id="jobEditModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-30 hidden">
+      <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+        <!-- Modern Header -->
+        <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+          <div class="relative bg-gradient-to-r from-accent via-blue-700 to-blue-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+            <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+              <i class="fas fa-briefcase text-white text-4xl"></i>
+            </div>
+            <div>
+              <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Editar Vaga</h2>
+              <p class="text-blue-100 text-sm font-medium">Altere os dados da vaga de emprego</p>
+            </div>
+            <button
+              id="closeJobEditModal"
+              class="absolute top-4 right-4 bg-white/80 hover:bg-white text-accent rounded-full p-2 shadow-lg transition"
+              title="Fechar"
+              style="z-index:20"
+              type="button"
+            >
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+          <form id="jobEditForm" class="space-y-4">
+            <input type="hidden" id="editJobId" />
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Nome da Empresa</label>
+              <input
+                type="text"
+                id="editJobCompany"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Título da Vaga</label>
+              <input
+                type="text"
+                id="editJobTitle"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Descrição</label>
+              <textarea
+                id="editJobDescription"
+                rows="4"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Requisitos</label>
+              <textarea
+                id="editJobRequirements"
+                rows="4"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Palavras-chave</label>
+              <textarea
+                id="editJobKeywords"
+                rows="2"
+                placeholder="Ex: React, JavaScript, Front-end"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50 resize-none"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Localização</label>
+              <input
+                type="text"
+                id="editJobLocation"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Faixa Salarial</label>
+              <input
+                type="text"
+                id="editJobSalaryRange"
+                placeholder="Ex: R$ 3.000,00 - R$ 5.000,00"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Prazo de Inscrição</label>
+              <input
+                type="date"
+                id="editJobDeadline"
+                required
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Status</label>
+              <select
+                id="editJobStatus"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+                onchange="toggleCandidatoSelect(this.value)"
+              >
+                <option value="Em Divulgação">Em Divulgação</option>
+                <option value="Suspensa">Suspensa</option>
+                <option value="Aguardando Retorno">Aguardando Retorno</option>
+                <option value="Fechada">Fechada</option>
+              </select>
+            </div>
+            <div id="candidatoSelectContainer" class="hidden">
+              <label class="block text-sm font-medium mb-1 text-gray-700">Candidato Selecionado</label>
+              <select
+                id="editJobCandidato"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              >
+                <option value="">Selecione o candidato</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Quantidade de Vagas</label>
+              <input
+                type="number"
+                id="editJobQuantity"
+                min="1"
+                value="1"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 text-gray-700">Data de Fechamento (opcional)</label>
+              <input
+                type="date"
+                id="editJobClosingDate"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-accent transition bg-gray-50"
+              />
+            </div>
+            <div class="flex flex-col sm:flex-row justify-end mt-6 gap-3">
+              <button
+                type="submit"
+                class="bg-gradient-to-r from-accent to-blue-700 text-white py-2 px-6 rounded-lg font-semibold shadow hover:from-blue-700 hover:to-accent transition flex items-center gap-2"
+              >
+                <i class="fas fa-save"></i> Salvar Alterações
+              </button>
+              <button
+                type="button"
+                id="cancelJobEditModal"
+                class="bg-gray-200 text-navy py-2 px-6 rounded-lg font-medium hover:bg-gray-300 transition flex items-center gap-2"
+              >
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Fecha o modal ao clicar fora da caixa
+      document.getElementById('jobEditModal').addEventListener('mousedown', function (e) {
+        const modalBox = this.querySelector('.modal');
+        if (!modalBox.contains(e.target)) {
+          modalBox.classList.remove('show');
+          setTimeout(() => this.classList.add('hidden'), 300);
+        }
+      });
+
+      // Cancelar botão (ícone e texto)
+      document.getElementById('cancelJobEditModal').addEventListener('click', function () {
+        const modal = document.getElementById('jobEditModal');
+        modal.querySelector('.modal').classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+      });
+
+      // Ícone X no topo
+      document.getElementById('closeJobEditModal').addEventListener('click', function () {
+        const modal = document.getElementById('jobEditModal');
+        modal.querySelector('.modal').classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+      });
+    </script>
+    <style>
+      /* Custom scrollbar for modal */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #2563eb55;
+        border-radius: 8px;
+      }
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #2563eb55 transparent;
+      }
+    </style>
+
+    <!-- Job Details Modal -->
+    <div id="jobDetailsModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-40 hidden">
+      <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+        <!-- Modern Header -->
+        <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+          <div class="relative bg-gradient-to-r from-accent via-blue-700 to-blue-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+            <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+              <i class="fas fa-briefcase text-white text-4xl"></i>
+            </div>
+            <div>
+              <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Detalhes da Vaga</h2>
+              <p class="text-blue-100 text-sm font-medium">Informações completas da vaga de emprego</p>
+            </div>
+            <button
+              id="closeJobDetailsModal"
+              class="absolute top-4 right-4 bg-white/80 hover:bg-white text-accent rounded-full p-2 shadow-lg transition"
+              title="Fechar"
+              style="z-index:20"
+            >
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+          <div id="jobDetailsContent" class="space-y-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidates Modal -->
+    <div id="candidatesModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+      <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+        <!-- Modern Header -->
+        <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+          <div class="relative bg-gradient-to-r from-accent via-blue-700 to-blue-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+            <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+              <i class="fas fa-users text-white text-4xl"></i>
+            </div>
+            <div>
+              <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Candidatos Inscritos</h2>
+              <p class="text-blue-100 text-sm font-medium">Veja todos os candidatos desta vaga</p>
+            </div>
+            <button
+              id="closeCandidatesModal"
+              class="absolute top-4 right-4 bg-white/80 hover:bg-white text-accent rounded-full p-2 shadow-lg transition"
+              title="Fechar"
+              style="z-index:20"
+            >
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+        </div>
+        <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+          <div id="candidatesContent" class="space-y-3"></div>
+        </div>
+      </div>
+    </div>
+    <style>
+    /* Custom scrollbar for modal */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #2563eb55;
+      border-radius: 8px;
+    }
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #2563eb55 transparent;
+    }
+    </style>
+  </div>
+
+  <script>
+    // Elementos do DOM
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content');
+    const loginForm = document.getElementById('login-form');
+    const loginEmail = document.getElementById('login-email');
+    const loginPassword = document.getElementById('login-password');
+    const loginError = document.getElementById('login-error');
+    const logoutButton = document.getElementById('logout-button');
+
+    // Definição do API_BASE_URL
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? '/public_html/dash/api'
+      : window.location.origin + '/dash/api';
+
+    // Credenciais
+    const validCredentials = {
+      email: 'admin@formatar.com',
+      password: 'admin123'
+    };
+
+    // Funções de Login
+    function showLogin() {
+      loginContainer.classList.remove('hidden');
+      mainContent.classList.add('hidden');
+      loginEmail.value = '';
+      loginPassword.value = '';
+      loginError.classList.add('hidden');
+    }
+
+    function showMainContent() {
+      loginContainer.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+    }
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+      // Verificar se Chart.js está carregado
+      if (typeof Chart === 'undefined') {
+        console.error('Chart.js não está carregado');
+        alert('Erro: Chart.js não foi carregado corretamente. Por favor, recarregue a página.');
+        return;
+      }
+      console.log('Chart.js carregado com sucesso');
+
+      // Definir data inicial como primeiro dia do mês atual
+      const firstDay = new Date();
+      firstDay.setDate(1);
+      const today = new Date();
+
+      // Configurar datas para currículos
+      const resumeDataInicio = document.getElementById('resumeDataInicio');
+      const resumeDataFim = document.getElementById('resumeDataFim');
+      resumeDataInicio.value = firstDay.toISOString().split('T')[0];
+      resumeDataFim.value = today.toISOString().split('T')[0];
+
+      // Configurar datas para estatísticas
+      const statsDataInicio = document.getElementById('statsDataInicio');
+      const statsDataFim = document.getElementById('statsDataFim');
+      statsDataInicio.value = firstDay.toISOString().split('T')[0];
+      statsDataFim.value = today.toISOString().split('T')[0];
+
+      // Atribuir elementos do Modal Adicionar Candidato e configurar listeners AQUI
+      addCandidatoProcessoModal = document.getElementById('addCandidatoProcessoModal');
+      addCandidatoModalTitle = document.getElementById('addCandidatoModalTitle');
+      addCandidatoProcessoForm = document.getElementById('addCandidatoProcessoForm');
+      addCandidatoVagaIdInput = document.getElementById('addCandidatoVagaId');
+      addCandidatoSelect = document.getElementById('addCandidatoSelect');
+      addCandidatoError = document.getElementById('addCandidatoError');
+      closeAddCandidatoModalButton = document.getElementById('closeAddCandidatoModal');
+      cancelAddCandidatoModalButton = document.getElementById('cancelAddCandidatoModal');
+
+      if (addCandidatoProcessoForm) {
+          addCandidatoProcessoForm.addEventListener('submit', handleAddCandidatoSubmit);
+      }
+      if (closeAddCandidatoModalButton) {
+          closeAddCandidatoModalButton.addEventListener('click', closeAddCandidatoModal);
+      }
+      if (cancelAddCandidatoModalButton) {
+          cancelAddCandidatoModalButton.addEventListener('click', closeAddCandidatoModal);
+      }
+      if (addCandidatoProcessoModal) {
+        addCandidatoProcessoModal.addEventListener('mousedown', function (e) {
+          const modalBox = this.querySelector('.modal');
+          if (modalBox && !modalBox.contains(e.target)) {
+              closeAddCandidatoModal();
+          }
+        });
+      }
+
+      // Verificar login
+      if (localStorage.getItem('isLoggedIn') === 'true') {
+        showMainContent();
+        statsTabButton.click();
+      } else {
+        showLogin();
+      }
+    });
+
+    // Login
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+
+      if (email === validCredentials.email && password === validCredentials.password) {
+        localStorage.setItem('isLoggedIn', 'true');
+        showMainContent();
+        statsTabButton.click();
+      } else {
+        loginError.textContent = 'E-mail ou senha inválidos.';
+        loginError.classList.remove('hidden');
+      }
+    });
+
+    // Logout
+    logoutButton.addEventListener('click', function() {
+      localStorage.removeItem('isLoggedIn');
+      showLogin();
+    });
+
+    // Resto do código...
+
+    // UUID generator
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0,
+          v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+
+    // DOM elements
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger');
+    const resumeTableBody = document.getElementById('resumeTableBody');
+    const searchInput = document.getElementById('searchInput');
+    const detailsModal = document.getElementById('detailsModal');
+    const modalContent = document.getElementById('modalContent');
+    const evaluationsList = document.getElementById('evaluationsList');
+    const evaluationInput = document.getElementById('evaluationInput');
+    const saveEvaluation = document.getElementById('saveEvaluation');
+    const downloadProfile = document.getElementById('downloadProfile');
+    const closeModal = document.getElementById('closeModal');
+    const resumeTabButton = document.getElementById('resumeTabButton');
+    const statsTabButton = document.getElementById('statsTabButton');
+    const jobsTabButton = document.getElementById('jobsTabButton');
+    const matchesTabButton = document.getElementById('matchesTabButton');
+    const inscritosTabButton = document.getElementById('inscritosTabButton');
+    const createJobButton = document.getElementById('createJobButton');
+    const jobCreationModal = document.getElementById('jobCreationModal');
+    const jobCreationForm = document.getElementById('jobCreationForm');
+    const closeJobCreationModal = document.getElementById('closeJobCreationModal');
+    const jobPostingsList = document.getElementById('jobPostingsList');
+    const jobDetailsModal = document.getElementById('jobDetailsModal');
+    const jobDetailsContent = document.getElementById('jobDetailsContent');
+    const closeJobDetailsModal = document.getElementById('closeJobDetailsModal');
+    const matchesTableBody = document.getElementById('matchesTableBody');
+    const inscritosTableBody = document.getElementById('inscritosTableBody');
+    const searchInscritosInput = document.getElementById('searchInscritosInput');
+    const jobEditModal = document.getElementById('jobEditModal');
+    const jobEditForm = document.getElementById('jobEditForm');
+    const closeJobEditModal = document.getElementById('closeJobEditModal');
+    const candidatesModal = document.getElementById('candidatesModal');
+    const candidatesContent = document.getElementById('candidatesContent');
+    const closeCandidatesModal = document.getElementById('closeCandidatesModal');
+    const { jsPDF } = window.jspdf;
+
+    // Elementos do Modal Adicionar Candidato ao Processo Seletivo
+    // Declarar aqui com let, para serem atribuídos dentro de DOMContentLoaded
+    let addCandidatoProcessoModal,
+        addCandidatoModalTitle,
+        addCandidatoProcessoForm,
+        addCandidatoVagaIdInput,
+        addCandidatoSelect,
+        addCandidatoError,
+        closeAddCandidatoModalButton,
+        cancelAddCandidatoModalButton;
+
+    // Data storage
+    let resumes = [];
+    let jobPostings = [];
+    let inscritos = [];
+    let evaluations = JSON.parse(localStorage.getItem('evaluations')) || {};
+
+    // Login handling
+    function showLogin() {
+      loginContainer.classList.remove('hidden');
+      mainContent.classList.add('hidden');
+      loginEmail.value = '';
+      loginPassword.value = '';
+      loginError.classList.add('hidden');
+    }
+
+    function showMainContent() {
+      loginContainer.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+    }
+
+    // Verificar login ao carregar a página
+    document.addEventListener('DOMContentLoaded', function() {
+      if (localStorage.getItem('isLoggedIn') === 'true') {
+        showMainContent();
+        loadAreas(); // Carregar áreas de interesse
+        fetchResumes();
+        renderJobPostings();
+        loadStats();
+      } else {
+        showLogin();
+      }
+    });
+
+    // Login form submission
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+
+      if (!email.includes('@') || password.length < 6) {
+        loginError.textContent = 'Por favor, insira um e-mail válido e uma senha com pelo menos 6 caracteres.';
+        loginError.classList.remove('hidden');
+        return;
+      }
+
+      if (email === validCredentials.email && password === validCredentials.password) {
+        localStorage.setItem('isLoggedIn', 'true');
+        showMainContent();
+        fetchResumes();
+        renderJobPostings();
+        loadStats();
+      } else {
+        loginError.textContent = 'E-mail ou senha inválidos.';
+        loginError.classList.remove('hidden');
+      }
+    });
+
+    // Logout handling
+    logoutButton.addEventListener('click', function() {
+      localStorage.removeItem('isLoggedIn');
+      showLogin();
+    });
+
+    // Hamburger menu
+    hamburger.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+    });
+
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-button').forEach(function(btn) {
+        btn.classList.remove('bg-accent');
+        btn.classList.add('hover:bg-accent/80');
+      });
+      document.querySelectorAll('.tab-content').forEach(function(content) {
+        content.classList.add('hidden');
+      });
+      document.querySelector(`[data-tab="${tabId}"]`).classList.add('bg-accent');
+      document.getElementById(tabId).classList.remove('hidden');
+      
+      if (tabId === 'resume-tab') {
+        fetchResumes();
+      } else if (tabId === 'jobs-tab') {
+        renderJobPostings();
+      } else if (tabId === 'matches-tab') {
+        renderMatches();
+      } else if (tabId === 'inscritos-tab') {
+        fetchInscritos();
+      } else if (tabId === 'stats-tab') {
+        loadStats(statsDataInicio.value, statsDataFim.value);
+      }
+      
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+      }
+    }
+
+    // Add event listeners to tab buttons
+    document.querySelectorAll('.tab-button').forEach(function(button) {
+      button.addEventListener('click', function() {
+        switchTab(this.getAttribute('data-tab'));
+      });
+    });
+
+    // Add event listener for search input
+    searchInput.addEventListener('input', () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      const filteredResumes = resumes.filter(resume => 
+        resume.nome.toLowerCase().includes(searchTerm) ||
+        resume.email.toLowerCase().includes(searchTerm) ||
+        (resume.area && resume.area.toLowerCase().includes(searchTerm))
+      );
+      renderTable(filteredResumes);
+    });
+
+    // Initialize stats tab
+    statsTabButton.click();
+
+    // Get API base URL
+    function getApiBaseUrl() {
+      return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/public_html/dash/api'  // URL local (XAMPP)
+        : 'api';                   // URL de produção
+    }
+
+    // Carregar áreas de interesse
+    async function loadAreas() {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/get_areas.php`);
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const areas = await response.json();
+        
+        const areaFilter = document.getElementById('areaFilter');
+        areaFilter.innerHTML = '<option value="">Todas as áreas</option>';
+        areas.forEach(area => {
+          areaFilter.innerHTML += `<option value="${area}">${area}</option>`;
+        });
+      } catch (error) {
+        console.error('Erro ao carregar áreas:', error);
+      }
+    }
+
+    // Fetch resumes
+    async function fetchResumes() {
+      try {
+        resumeTableBody.innerHTML = '<tr><td colspan="8" class="p-3 text-gray-600">Carregando...</td></tr>';
+        
+        const dataInicio = document.getElementById('resumeDataInicio').value;
+        const dataFim = document.getElementById('resumeDataFim').value;
+        const area = document.getElementById('areaFilter').value;
+        const escolaridade = document.getElementById('escolaridadeFilter').value;
+        const searchTerm = document.getElementById('searchInput').value;
+        
+        // Debug dos valores dos filtros
+        console.log('Filtros:', {
+          dataInicio,
+          dataFim,
+          area: area !== 'Todas as áreas' ? area : '',
+          escolaridade: escolaridade !== 'Todas' ? escolaridade : '',
+          searchTerm
+        });
+        
+        const params = new URLSearchParams();
+        if (dataInicio) params.append('data_inicio', dataInicio);
+        if (dataFim) params.append('data_fim', dataFim);
+        if (area && area !== 'Todas as áreas') params.append('area', area);
+        if (escolaridade && escolaridade !== 'Todas') params.append('escolaridade', escolaridade);
+        if (searchTerm) params.append('search', searchTerm);
+        
+        const url = `${getApiBaseUrl()}/get_resumes.php${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('URL da busca:', url);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        resumes = data;
+        renderTable(resumes);
+        renderMatches();
+      } catch (error) {
+        console.error('Erro ao buscar currículos:', error);
+        resumeTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-red-600">Erro: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Fetch inscritos
+    async function fetchInscritos() {
+      try {
+        inscritosTableBody.innerHTML = '<tr><td colspan="6" class="p-3 text-gray-600">Carregando...</td></tr>';
+        const response = await fetch('api/get_inscritos.php', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        inscritos = data;
+        renderInscritos(inscritos);
+      } catch (error) {
+        console.error('Erro ao buscar inscritos:', error);
+        inscritosTableBody.innerHTML = `<tr><td colspan="6" class="p-3 text-red-600">Erro: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Compute job-resume matches
+    function computeMatches() {
+      return jobPostings.map((job) => {
+        const jobMatches = resumes
+          .map((resume) => {
+            let score = 0;
+            const resumeArea = (resume.area || '').toLowerCase();
+            const jobTitle = (job.title || '').toLowerCase();
+            const jobDesc = (job.description || '').toLowerCase();
+            const jobReqs = (job.requirements || '').toLowerCase();
+            const qualifications = resume.qualifications
+              ? resume.qualifications.map((q) => (q.descricao || '').toLowerCase()).join(' ')
+              : '';
+            const experiences = resume.experiences
+              ? resume.experiences
+                  .map((e) => `${e.cargo || ''} ${e.responsabilidades || ''}`)
+                  .join(' ')
+                  .toLowerCase()
+              : '';
+            const keywords = job.keywords
+              ? job.keywords.split(',').map((k) => k.trim().toLowerCase()).filter((k) => k)
+              : [];
+
+            if (resumeArea && (jobTitle.includes(resumeArea) || jobDesc.includes(resumeArea))) {
+              score += 40;
+            }
+
+            const reqWords = jobReqs.split(/\s+/);
+            const qualWords = qualifications.split(/\s+/);
+            const commonWords = reqWords.filter((word) => qualWords.includes(word));
+            score += Math.min(commonWords.length * 10, 30);
+
+            if (keywords.length > 0) {
+              keywords.forEach((keyword) => {
+                if (
+                  resumeArea.includes(keyword) ||
+                  qualifications.includes(keyword) ||
+                  experiences.includes(keyword)
+                ) {
+                  score += 10;
+                }
+              });
+            }
+
+            return { resume, score: Math.min(score, 100) };
+          })
+          .filter((match) => match.score >= 40) // Aumentado para 40%
+          .sort((a, b) => b.score - a.score);
+
+        return { job, matches: jobMatches };
+      });
+    }
+
+    // Render matches table
+    function renderMatches() {
+      try {
+        const matches = computeMatches();
+        matchesTableBody.innerHTML = matches.length > 0
+          ? matches
+              .map(({ job, matches }) => {
+                const initialCandidates = matches.slice(0, 5);
+                const remainingCandidates = matches.slice(5);
+                const hasMoreCandidates = remainingCandidates.length > 0;
+
+                return `
+                  <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors">
+                    <td class="p-3 min-w-[250px]">
+                      <div class="flex flex-col space-y-1 bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                        <button
+                          class="view-job-details text-accent hover:text-accent/70 transition-colors font-medium text-base"
+                          data-id="${job.id}"
+                        >
+                          ${job.title}
+                        </button>
+                        <div class="company-name text-gray-600 flex items-center text-xs">
+                          <i class="fas fa-building mr-1"></i>
+                          ${job.company}
+                        </div>
+                      </div>
+                    </td>
+                    <td class="p-3">
+                      <div class="space-y-1">
+                        ${
+                          matches.length > 0
+                            ? `
+                              <div class="candidates-list-${job.id} space-y-1">
+                                ${initialCandidates
+                                  .map(
+                                    (m, index) => `
+                                    <div class="flex items-center gap-2 p-2 rounded-lg bg-white shadow-sm border border-gray-100 hover:border-accent/30 transition-colors group">
+                                      <div class="rank-number flex-shrink-0 rounded-full ${
+                                        index === 0 ? 'bg-yellow-100 text-yellow-600' :
+                                        index === 1 ? 'bg-gray-100 text-gray-600' :
+                                        index === 2 ? 'bg-orange-100 text-orange-600' :
+                                        'bg-accent/10 text-accent'
+                                      } flex items-center justify-center font-semibold w-5 h-5 text-xs">
+                                        ${index + 1}
+                                      </div>
+                                      <div class="flex-grow min-w-0">
+                                        <button
+                                          class="candidate-name view-resume-details text-navy hover:text-accent transition-colors font-medium text-sm group-hover:text-accent truncate block w-full text-left"
+                                          data-email="${m.resume.email}"
+                                          title="${m.resume.nome}"
+                                        >
+                                          ${m.resume.nome}
+                                        </button>
+                                      </div>
+                                      <div class="score-badge flex-shrink-0 ${
+                                        m.score >= 80 ? 'bg-green-500' :
+                                        m.score >= 60 ? 'bg-accent' :
+                                        'bg-orange-400'
+                                      } text-white font-medium rounded-full px-2 py-0.5 text-xs min-w-[48px] text-center">
+                                        ${m.score}%
+                                      </div>
+                                    </div>
+                                  `
+                                  )
+                                  .join('')}
+                              </div>
+                              ${
+                                hasMoreCandidates
+                                  ? `
+                                  <div class="hidden candidates-more-${job.id} space-y-1">
+                                    ${remainingCandidates
+                                      .map(
+                                        (m, index) => `
+                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-white shadow-sm border border-gray-100 hover:border-accent/30 transition-colors group">
+                                          <div class="rank-number flex-shrink-0 rounded-full bg-accent/10 text-accent flex items-center justify-center font-semibold w-5 h-5 text-xs">
+                                            ${index + 6}
+                                          </div>
+                                          <div class="flex-grow min-w-0">
+                                            <button
+                                              class="candidate-name view-resume-details text-navy hover:text-accent transition-colors font-medium text-sm group-hover:text-accent truncate block w-full text-left"
+                                              data-email="${m.resume.email}"
+                                              title="${m.resume.nome}"
+                                            >
+                                              ${m.resume.nome}
+                                            </button>
+                                          </div>
+                                          <div class="score-badge flex-shrink-0 ${
+                                            m.score >= 80 ? 'bg-green-500' :
+                                            m.score >= 60 ? 'bg-accent' :
+                                            'bg-orange-400'
+                                          } text-white font-medium rounded-full px-2 py-0.5 text-xs min-w-[48px] text-center">
+                                            ${m.score}%
+                                          </div>
+                                        </div>
+                                      `
+                                      )
+                                      .join('')}
+                                  </div>
+                                  <button
+                                    class="show-more-btn text-accent hover:text-accent/70 transition-colors font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-accent/5 text-xs w-full justify-center"
+                                    data-job-id="${job.id}"
+                                    onclick="toggleCandidates('${job.id}')"
+                                  >
+                                    <i class="fas fa-chevron-down"></i>
+                                    Ver mais ${remainingCandidates.length} candidatos
+                                  </button>
+                                  `
+                                  : ''
+                              }`
+                            : '<div class="text-gray-500 italic text-xs">Nenhum candidato com compatibilidade ≥ 40%</div>'
+                        }
+                      </div>
+                    </td>
+                    <td class="p-3 w-20">
+                      <div class="total-badge bg-accent/10 text-accent font-semibold rounded-full px-2 py-0.5 text-center text-xs">
+                        ${matches.length}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              })
+              .join('')
+          : '<tr><td colspan="3" class="p-4 text-gray-500 text-center italic">Nenhuma vaga ou currículo registrado.</td></tr>';
+
+        document.querySelectorAll('.view-resume-details').forEach((button) => {
+          button.removeEventListener('click', handleViewResumeDetails);
+          button.addEventListener('click', handleViewResumeDetails);
+        });
+
+        document.querySelectorAll('.view-job-details').forEach((button) => {
+          button.removeEventListener('click', handleViewJobDetails);
+          button.addEventListener('click', handleViewJobDetails);
+        });
+      } catch (error) {
+        console.error('Erro ao renderizar compatibilidades:', error);
+        matchesTableBody.innerHTML = `<tr><td colspan="3" class="p-4 text-red-600">Erro: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Função para alternar a visibilidade dos candidatos
+    function toggleCandidates(jobId) {
+      const moreList = document.querySelector(`.candidates-more-${jobId}`);
+      const button = document.querySelector(`button[data-job-id="${jobId}"]`);
+      
+      if (moreList.classList.contains('hidden')) {
+        moreList.classList.remove('hidden');
+        button.innerHTML = '<i class="fas fa-chevron-up"></i> Ver menos';
+      } else {
+        moreList.classList.add('hidden');
+        const remainingCount = moreList.querySelectorAll('.view-resume-details').length;
+        button.innerHTML = `<i class="fas fa-chevron-down"></i> Ver mais ${remainingCount} candidatos`;
+      }
+    }
+
+    function handleViewResumeDetails(event) {
+      const email = event.target.getAttribute('data-email');
+      const resume = resumes.find((r) => r.email === email);
+      const index = resumes.indexOf(resume);
+      showDetails(resume, index);
+    }
+
+    function handleViewJobDetails(event) {
+      const id = event.target.getAttribute('data-id');
+      viewJobDetails(id);
+    }
+
+    // Render resume table
+    function renderTable(data) {
+      try {
+        resumeTableBody.innerHTML = data.length > 0
+          ? data
+              .map(
+                (resume, index) => `
+                <tr class="border-b border-gray-200">
+                  <td class="p-3">${resume.created_at ? new Date(resume.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+                  <td class="p-3">${resume.nome}</td>
+                  <td class="p-3">${resume.email}</td>
+                  <td class="p-3">${resume.escolaridade || '-'}</td>
+                  <td class="p-3 flex flex-col sm:flex-row gap-2">
+                    <button
+                      class="view-details bg-accent text-white py-1.5 px-4 rounded-lg font-medium hover:bg-blue-700 transition"
+                      data-index="${index}"
+                    >
+                      Ver
+                    </button>
+                    <a
+                      href="${resume.curriculo}"
+                      download="${resume.curriculo !== '#' ? resume.curriculo.split('/').pop() : 'curriculo.pdf'}"
+                      class="bg-secondary text-white py-1.5 px-4 rounded-lg font-medium hover:bg-gray-600 transition"
+                      ${resume.curriculo === '#' ? 'style="pointer-events: none; opacity: 0.6;"' : ''}
+                    >
+                      Currículo
+                    </a>
+                    <button
+                      class="download-profile bg-navy text-white py-1.5 px-4 rounded-lg font-medium hover:bg-blue-800 transition"
+                      data-index="${index}"
+                    >
+                      Ficha
+                    </button>
+                  </td>
+                </tr>
+              `
+              )
+              .join('')
+          : '<tr><td colspan="5" class="p-3 text-gray-600">Nenhum currículo registrado.</td></tr>';
+
+        document.querySelectorAll('.view-details').forEach((button) => {
+          button.removeEventListener('click', handleViewDetails);
+          button.addEventListener('click', handleViewDetails);
+        });
+        document.querySelectorAll('.download-profile').forEach((button) => {
+          button.removeEventListener('click', handleDownloadProfile);
+          button.addEventListener('click', handleDownloadProfile);
+        });
+      } catch (error) {
+        console.error('Erro ao renderizar currículos:', error);
+        resumeTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-red-600">Erro: ${error.message}</td></tr>`;
+      }
+    }
+
+    function handleViewDetails(event) {
+      const index = event.target.getAttribute('data-index');
+      showDetails(resumes[index], index);
+    }
+
+    function handleDownloadProfile(event) {
+      const index = event.target.getAttribute('data-index');
+      generatePDF(resumes[index]);
+    }
+
+    // Render inscritos table
+    function renderInscritos(data) {
+      try {
+        inscritosTableBody.innerHTML = data.length > 0
+          ? data
+              .map((vaga) => {
+                const diasRestantes = calculateDaysRemaining(vaga.deadline);
+                const statusClasses = {
+                  Fechada: 'bg-green-100 text-green-800',
+                  Suspensa: 'bg-red-100 text-red-800',
+                  'Em Divulgação': 'bg-yellow-100 text-yellow-800',
+                  'Aguardando Retorno': 'bg-gray-100 text-gray-800',
+                };
+                const statusClass = statusClasses[vaga.status] || 'bg-gray-100 text-gray-800';
+                const diasText =
+                  diasRestantes > 0 ? `${diasRestantes} dias` : diasRestantes === 0 ? 'Hoje' : 'Encerrado';
+                const prazoFormatado = vaga.deadline ? new Date(vaga.deadline).toLocaleDateString('pt-BR') : 'N/A';
+
+                return `
+                  <tr class="border-b border-gray-200">
+                    <td class="p-3">${vaga.title || '-'}</td>
+                    <td class="p-3">${vaga.company || '-'}</td>
+                    <td class="p-3"><span class="status-badge ${statusClass}">${vaga.status || 'Indefinido'}</span></td>
+                    <td class="p-3">${prazoFormatado}</td>
+                    <td class="p-3 ${diasRestantes <= 3 ? 'text-red-600 font-medium' : 'text-gray-700'}">${diasText}</td>
+                    <td class="p-3 text-center">${vaga.total_inscritos || 0}</td>
+                    <td class="p-3">
+                      <button
+                        class="view-candidates bg-accent text-white py-1.5 px-4 rounded-lg font-medium hover:bg-blue-700 transition"
+                        data-id="${vaga.id}"
+                      >
+                        Ver Candidatos
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              })
+              .join('')
+          : '<tr><td colspan="6" class="p-3 text-gray-600">Nenhuma vaga registrada.</td></tr>';
+
+        document.querySelectorAll('.view-candidates').forEach((button) => {
+          button.removeEventListener('click', handleViewCandidates);
+          button.addEventListener('click', handleViewCandidates);
+        });
+      } catch (error) {
+        console.error('Erro ao renderizar inscritos:', error);
+        inscritosTableBody.innerHTML = `<tr><td colspan="6" class="p-3 text-red-600">Erro: ${error.message}</td></tr>`;
+      }
+    }
+
+    function handleViewCandidates(event) {
+      const id = event.target.getAttribute('data-id');
+      viewCandidates(id);
+    }
+
+    // Calculate days remaining
+    function calculateDaysRemaining(deadline) {
+      try {
+        const deadlineDate = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffTime = deadlineDate - today;
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      } catch (error) {
+        console.error('Erro ao calcular dias restantes:', error);
+        return 0;
+      }
+    }
+
+    // View candidates for a job
+    async function viewCandidates(id) {
+      try {
+        currentJobId = id; // Define o ID da vaga atual
+        const vaga = inscritos.find((v) => v.id === id);
+        if (!vaga) throw new Error('Vaga não encontrada');
+
+        candidatesContent.innerHTML = '<p class="text-gray-600">Carregando candidatos...</p>';
+        candidatesModal.classList.remove('hidden');
+        setTimeout(() => candidatesModal.querySelector('.modal').classList.add('show'), 10);
+
+        const response = await fetch(`api/get_candidates.php?jobId=${id}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        const candidates = data.candidates || [];
+
+        candidatesContent.innerHTML = `
+          <p><strong>Vaga:</strong> ${vaga.title}</p>
+          <p><strong>Empresa:</strong> ${vaga.company}</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Candidatos</h3>
+          ${candidates.length > 0 
+            ? candidates.map((c) => `
+                <div class="list-item p-4 bg-white rounded-xl shadow-sm mb-3 border border-gray-200">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p class="font-semibold text-lg text-navy mb-1 flex items-center">
+                        <i class="fas fa-user mr-2 text-accent"></i> ${c.nome || '-'}
+                      </p>
+                      <p class="text-gray-700 text-sm mb-1">
+                        <i class="fas fa-envelope mr-1 text-accent"></i> <span class="break-all">${c.email || '-'}</span>
+                      </p>
+                      <p class="text-gray-700 text-sm mb-1">
+                        <i class="fab fa-whatsapp mr-1 text-green-600"></i>
+                        <strong>WhatsApp:</strong>
+                        ${c.telefone 
+                          ? `<a href="https://wa.me/${c.telefone.replace(/\D/g, '').replace(/^0/, '').padStart(13, '55')}" target="_blank" class="text-accent hover:underline">${c.telefone}</a>`
+                          : '-'
+                        }
+                      </p>
+                    </div>
+                    <div class="mt-2 sm:mt-0">
+                      <button
+                        class="view-resume-details bg-accent text-white py-2 px-5 rounded-lg font-medium shadow hover:bg-blue-700 transition"
+                        data-email="${c.email}"
+                        data-nome="${c.nome}"
+                        data-telefone="${c.telefone || ''}"
+                      >
+                        <i class="fas fa-eye mr-1"></i> Ver Detalhes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')
+            : '<p class="text-gray-600">Nenhum candidato inscrito.</p>'
+          }
+        `;
+
+        document.querySelectorAll('.view-resume-details').forEach((button) => {
+          button.removeEventListener('click', handleViewResumeDetailsFromCandidates);
+          button.addEventListener('click', handleViewResumeDetailsFromCandidates);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar candidatos:', error);
+        candidatesContent.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+      }
+    }
+
+    function handleViewResumeDetailsFromCandidates(event) {
+      const button = event.target.closest('.view-resume-details');
+      if (!button) return;
+      
+      const email = button.getAttribute('data-email');
+      const nome = button.getAttribute('data-nome');
+      const telefone = button.getAttribute('data-telefone');
+      
+      const resume = {
+        email: email,
+        nome: nome,
+        telefone: telefone
+      };
+      
+      lastViewedJob = currentJobId;
+      detailsModal.classList.remove('hidden');
+      showDetails(resume);
+      candidatesModal.querySelector('.modal').classList.remove('show');
+      setTimeout(() => candidatesModal.classList.add('hidden'), 300);
+    }
+
+    // Show resume details
+    function showDetails(resume) {
+      try {
+        // Primeiro mostra os dados básicos que já temos
+        modalContent.innerHTML = `
+          <p><strong>Nome:</strong> ${resume.nome}</p>
+          <p><strong>E-mail:</strong> ${resume.email}</p>
+          <p><strong>Telefone:</strong> ${resume.telefone || '-'}</p>
+          <p><strong>Cidade:</strong> ${resume.cidade || '-'}</p>
+          <p><strong>Estado:</strong> ${resume.estado || '-'}</p>
+          <div id="additionalDetails">Carregando detalhes adicionais...</div>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Experiências Profissionais</h3>
+          <div id="experiencesList"><p class="text-gray-600">Carregando experiências...</p></div>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Qualificações</h3>
+          <div id="qualificationsList"><p class="text-gray-600">Carregando qualificações...</p></div>
+        `;
+
+        detailsModal.classList.remove('hidden');
+        setTimeout(() => detailsModal.querySelector('.modal').classList.add('show'), 10);
+
+        // Carrega os detalhes completos
+        fetch(`api/get_candidato.php?email=${resume.email}`)
+          .then(response => response.json())
+          .then(result => {
+            if (result.success && result.data) {
+              const fullData = result.data;
+              
+              // Atualiza detalhes adicionais
+              document.getElementById('additionalDetails').innerHTML = `
+                <p><strong>Data de Nascimento:</strong> ${fullData.nascimento ? new Date(fullData.nascimento).toLocaleDateString('pt-BR') : '-'}</p>
+                <p><strong>Escolaridade:</strong> ${fullData.escolaridade || '-'}</p>
+                <p><strong>Status da Escolaridade:</strong> ${fullData.status_escolaridade || '-'}</p>
+                <p><strong>CNH:</strong> ${fullData.cnh || '-'}</p>
+                <p><strong>RG:</strong> ${fullData.rg || '-'}</p>
+                <p><strong>CPF:</strong> ${fullData.cpf || '-'}</p>
+                <p><strong>Área de Interesse:</strong> ${fullData.area_interesse || '-'}</p>
+                <p><strong>LinkedIn:</strong> ${fullData.linkedin ? `<a href="${fullData.linkedin}" target="_blank" class="text-accent hover:underline">${fullData.linkedin}</a>` : '-'}</p>
+                <p><strong>Pretensão Salarial:</strong> ${fullData.pretensao_salarial || '-'}</p>
+                <p><strong>Disponibilidade:</strong> ${fullData.disponibilidade || '-'}</p>
+                <p><strong>LGPD:</strong> ${fullData.lgpd ? 'Aceito' : 'Não aceito'}</p>
+              `;
+
+              // Atualiza experiências
+              document.getElementById('experiencesList').innerHTML = 
+                fullData.experiences && fullData.experiences.length > 0
+                  ? fullData.experiences.map(exp => `
+                      <div class="list-item p-3 bg-gray-50 rounded-lg mb-2">
+                        <p><strong>Empresa:</strong> ${exp.empresa || '-'}</p>
+                        <p><strong>Cargo:</strong> ${exp.cargo || '-'}</p>
+                        <p><strong>Período:</strong> ${exp.periodo || '-'}</p>
+                        <p><strong>Descrição:</strong> ${exp.descricao || '-'}</p>
+                      </div>
+                    `).join('')
+                  : '<p class="text-gray-600">Nenhuma experiência registrada.</p>';
+
+              // Atualiza qualificações
+              document.getElementById('qualificationsList').innerHTML = 
+                fullData.qualifications && fullData.qualifications.length > 0
+                  ? fullData.qualifications.map(qual => `
+                      <div class="list-item p-3 bg-gray-50 rounded-lg mb-2">
+                        <p><strong>Descrição:</strong> ${qual.descricao || '-'}</p>
+                        <p><strong>Instituição:</strong> ${qual.instituicao || '-'}</p>
+                        <p><strong>Ano:</strong> ${qual.ano || '-'}</p>
+                      </div>
+                    `).join('')
+                  : '<p class="text-gray-600">Nenhuma qualificação registrada.</p>';
+            } else {
+              document.getElementById('additionalDetails').innerHTML = '<p class="text-red-600">Erro ao carregar detalhes adicionais</p>';
+              document.getElementById('experiencesList').innerHTML = '<p class="text-red-600">Erro ao carregar experiências</p>';
+              document.getElementById('qualificationsList').innerHTML = '<p class="text-red-600">Erro ao carregar qualificações</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao carregar detalhes completos:', error);
+            document.getElementById('additionalDetails').innerHTML = '<p class="text-red-600">Erro ao carregar detalhes adicionais</p>';
+            document.getElementById('experiencesList').innerHTML = '<p class="text-red-600">Erro ao carregar experiências</p>';
+            document.getElementById('qualificationsList').innerHTML = '<p class="text-red-600">Erro ao carregar qualificações</p>';
+          });
+      } catch (error) {
+        console.error('Erro ao exibir detalhes do currículo:', error);
+        modalContent.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+      }
+    }
+          ${
+            resume.experiences && resume.experiences.length > 0
+              ? resume.experiences
+                  .map(
+                    (exp, i) => `
+                    <div class="list-item p-3 bg-gray-50 rounded-lg mb-2">
+                      <p><strong>Experiência ${i + 1}</strong></p>
+                      <p><strong>Cargo:</strong> ${exp.cargo || '-'}</p>
+                      <p><strong>Empresa:</strong> ${exp.empresa || '-'}</p>
+                      <p><strong>Período:</strong> ${
+                        exp.inicio ? new Date(exp.inicio).toLocaleDateString('pt-BR') : '-'
+                      } a ${
+                        exp.termino === '1900-01-01'
+                          ? 'Atualmente no emprego'
+                          : exp.termino
+                          ? new Date(exp.termino).toLocaleDateString('pt-BR')
+                          : '-'
+                      }</p>
+                      <p><strong>Responsabilidades:</strong> ${exp.responsabilidades || '-'}</p>
+                    </div>
+                  `
+                  )
+                  .join('')
+              : '<p class="text-gray-600">Nenhuma experiência registrada.</p>'
+          }
+          <h3 class="text-lg font-semibold mt-4 mb-2">Qualificações</h3>
+          ${
+            resume.qualifications && resume.qualifications.length > 0
+              ? resume.qualifications
+                  .map(
+                    (qual, i) => `
+                    <div class="list-item p-3 bg-gray-50 rounded-lg mb-2">
+                      <p><strong>Qualificação ${i + 1}</strong></p>
+                      <p><strong>Descrição:</strong> ${qual.descricao || '-'}</p>
+                      <p><strong>Instituição:</strong> ${qual.instituicao || '-'}</p>
+                      <p><strong>Ano:</strong> ${qual.ano || '-'}</p>
+                    </div>
+                  `
+                  )
+                  .join('')
+              : '<p class="text-gray-600">Nenhuma qualificação registrada.</p>'
+          }
+        `;
+
+        const candidateEvaluations = evaluations[resume.email] || [];
+        evaluationsList.innerHTML = candidateEvaluations.length > 0
+          ? candidateEvaluations
+              .map(
+                (eval) => `
+                <div class="list-item p-3 bg-gray-50 rounded-lg">
+                  <p><strong>Data:</strong> ${new Date(eval.timestamp).toLocaleString('pt-BR')}</p>
+                  <p><strong>Avaliação:</strong> ${eval.text}</p>
+                </div>
+              `
+              )
+              .join('')
+          : '<p class="text-gray-600">Nenhuma avaliação registrada.</p>';
+
+        detailsModal.classList.remove('hidden');
+        setTimeout(() => detailsModal.querySelector('.modal').classList.add('show'), 10);
+
+        saveEvaluation.onclick = () => {
+          const text = evaluationInput.value.trim();
+          if (text) {
+            if (!evaluations[resume.email]) evaluations[resume.email] = [];
+            evaluations[resume.email].push({ timestamp: new Date().toISOString(), text });
+            localStorage.setItem('evaluations', JSON.stringify(evaluations));
+            evaluationInput.value = '';
+            showDetails(resume, index);
+          }
+        };
+
+        downloadProfile.onclick = () => generatePDF(resume);
+
+        // Adicionar event listener para o botão voltar
+        const backButton = document.getElementById('backToCandidates');
+        if (backButton) {
+          backButton.onclick = async function() {
+            detailsModal.querySelector('.modal').classList.remove('show');
+            setTimeout(async () => {
+              detailsModal.classList.add('hidden');
+              if (lastViewedJob) {
+                // Recarrega os candidatos da vaga
+                await loadJobCandidates(lastViewedJob);
+                candidatesModal.classList.remove('hidden');
+                setTimeout(() => candidatesModal.querySelector('.modal').classList.add('show'), 10);
+              }
+            }, 300);
+          };
+        }
+      } catch (error) {
+        console.error('Erro ao exibir detalhes do currículo:', error);
+        modalContent.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+      }
+    }
+
+    // Generate PDF
+    function generatePDF(resume) {
+      try {
+        if (typeof window.jspdf === 'undefined') {
+          throw new Error('Biblioteca jsPDF não está carregada. Por favor, recarregue a página.');
+        }
+        
+        if (!resume) {
+          throw new Error('Dados do currículo não encontrados.');
+        }
+
+        if (!resume.nome) {
+          throw new Error('Nome do candidato não encontrado.');
+        }
+
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) throw new Error('jsPDF não está disponível.');
+        
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 10;
+        const colWidth = (pageWidth - 3 * margin) / 2;
+        let y = margin + 15;
+
+        doc.setFillColor(37, 99, 235);
+        doc.rect(0, 0, pageWidth, 20, 'F');
+        doc.setFontSize(14);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Ficha do Candidato - Formatar RH', margin + 20, 15);
+        doc.setFontSize(8);
+        doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), pageWidth - margin - 50, 15);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setLineHeightFactor(1.2);
+
+        y += 10;
+        doc.setFontSize(12);
+        doc.setTextColor(37, 99, 235);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Informações Pessoais', margin, y);
+        y += 4;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 6;
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        const basicFields = [
+          { label: 'Nome', value: resume.nome || '-' },
+          { label: 'E-mail', value: resume.email || '-' },
+          { label: 'Telefone', value: resume.telefone || '-' },
+          {
+            label: 'Nascimento',
+            value: resume.nascimento ? new Date(resume.nascimento).toLocaleDateString('pt-BR') : '-',
+          },
+          { label: 'Cidade', value: resume.cidade || '-' },
+          { label: 'Estado', value: resume.estado || '-' },
+          { label: 'Escolaridade', value: resume.escolaridade || '-' },
+          { label: 'Status da Escolaridade', value: resume.status_escolaridade || '-' },
+          { label: 'CNH', value: resume.cnh || '-' },
+          { label: 'RG', value: resume.rg || '-' },
+          { label: 'CPF', value: resume.cpf || '-' },
+          { label: 'Área de Interesse', value: resume.area_interesse || '-' },
+          { label: 'LinkedIn', value: resume.linkedin || '-' },
+          { label: 'Pretensão Salarial', value: resume.pretensao_salarial || '-' },
+          { label: 'Disponibilidade', value: resume.disponibilidade || '-' },
+          { label: 'LGPD', value: resume.lgpd ? 'Aceito' : 'Não aceito' },
+        ];
+        let leftY = y,
+          rightY = y;
+        basicFields.forEach((field, index) => {
+          const targetY = index < 7 ? leftY : rightY;
+          const x = index < 7 ? margin : margin + colWidth + margin;
+          const maxWidth = colWidth - 5;
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${field.label}:`, x, targetY);
+          doc.setFont('helvetica', 'normal');
+          const sanitizedValue = field.value.replace(/[^\x20-\x7E]/g, '');
+          doc.text(sanitizedValue, x + 25, targetY, { maxWidth: maxWidth - 20 });
+          const height = doc.getTextDimensions(sanitizedValue, { maxWidth: maxWidth - 20 }).h + 4;
+          if (index < 7) leftY += height;
+          else rightY += height;
+          if (Math.max(leftY, rightY) > pageHeight - margin - 20) {
+            doc.addPage();
+            leftY = rightY = margin;
+          }
+        });
+        y = Math.max(leftY, rightY) + 5;
+
+        if (resume.experiences && resume.experiences.length > 0) {
+          if (y > pageHeight - margin - 30) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.setFontSize(12);
+          doc.setTextColor(37, 99, 235);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Experiências Profissionais', margin, y);
+          y += 4;
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          resume.experiences.forEach((exp, index) => {
+            const responsibilities = (exp.responsabilidades || '-').replace(/[^\x20-\x7E]/g, '');
+            const textHeight = doc.getTextDimensions(responsibilities, { maxWidth: pageWidth - 2 * margin - 10 }).h + 15;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y - 4, pageWidth - 2 * margin, textHeight, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${index + 1}. ${(exp.cargo || '-').replace(/[^\x20-\x7E]/g, '')}`, margin + 2, y);
+            doc.setFont('helvetica', 'normal');
+            y += 5;
+            doc.text(`Empresa: ${(exp.empresa || '-').replace(/[^\x20-\x7E]/g, '')}`, margin + 2, y);
+            y += 5;
+            const endDate =
+              exp.termino === '1900-01-01'
+                ? 'Atualmente no emprego'
+                : exp.termino
+                ? new Date(exp.termino).toLocaleDateString('pt-BR')
+                : '-';
+            doc.text(
+              `Período: ${exp.inicio ? new Date(exp.inicio).toLocaleDateString('pt-BR') : '-'} a ${endDate}`,
+              margin + 2,
+              y
+            );
+            y += 5;
+            doc.text(`Responsabilidades:`, margin + 2, y);
+            doc.text(responsibilities, margin + 10, y + 4, { maxWidth: pageWidth - 2 * margin - 10 });
+            y += textHeight - 5;
+            if (y > pageHeight - margin - 20) {
+              doc.addPage();
+              y = margin;
+            }
+          });
+        }
+
+        if (resume.qualifications && resume.qualifications.length > 0) {
+          if (y > pageHeight - margin - 30) {
+            doc.addPage();
+            y = margin;
+          }
+          y += 5;
+          doc.setFontSize(12);
+          doc.setTextColor(37, 99, 235);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Qualificações', margin, y);
+          y += 4;
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          resume.qualifications.forEach((qual, index) => {
+            const description = (qual.descricao || '-').replace(/[^\x20-\x7E]/g, '');
+            const textHeight = doc.getTextDimensions(description, { maxWidth: pageWidth - 2 * margin - 10 }).h + 12;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y - 4, pageWidth - 2 * margin, textHeight, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${index + 1}. ${description}`, margin + 2, y);
+            doc.setFont('helvetica', 'normal');
+            y += 5;
+            doc.text(`Instituição: ${(qual.instituicao || '-').replace(/[^\x20-\x7E]/g, '')}`, margin + 2, y);
+            y += 5;
+            doc.text(`Ano: ${qual.ano || '-'}`, margin + 2, y);
+            y += 7;
+            if (y > pageHeight - margin - 20) {
+              doc.addPage();
+              y = margin;
+            }
+          });
+        }
+
+        const candidateEvaluations = evaluations[resume.email] || [];
+        if (candidateEvaluations.length > 0) {
+          if (y > pageHeight - margin - 30) {
+            doc.addPage();
+            y = margin;
+          }
+          y += 5;
+          doc.setFontSize(12);
+          doc.setTextColor(37, 99, 235);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Avaliações', margin, y);
+          y += 4;
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          candidateEvaluations.forEach((eval, index) => {
+            const text = `${index + 1}. [${new Date(eval.timestamp).toLocaleString('pt-BR')}] ${(
+              eval.text || ''
+            ).replace(/[^\x20-\x7E]/g, '')}`;
+            const textHeight = doc.getTextDimensions(text, { maxWidth: pageWidth - 2 * margin - 10 }).h + 6;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y - 4, pageWidth - 2 * margin, textHeight, 'F');
+            doc.text(text, margin + 2, y, { maxWidth: pageWidth - 2 * margin - 10 });
+            y += textHeight;
+            if (y > pageHeight - margin - 20) {
+              doc.addPage();
+              y = margin;
+            }
+          });
+        }
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 30, pageHeight - margin);
+          doc.text('Formatar RH - Gestão de Talentos', margin, pageHeight - margin);
+        }
+
+        // Antes de salvar, verifica se o documento foi gerado corretamente
+        if (doc.internal.getNumberOfPages() === 0) {
+          throw new Error('Erro ao gerar o documento PDF.');
+        }
+
+        // Formata o nome do arquivo de forma mais amigável
+        const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        const nomeFormatado = resume.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+        const safeFileName = `Ficha_${nomeFormatado.replace(/[^a-zA-Z0-9]/g, '_')}_${dataAtual}.pdf`;
+        
+        try {
+          doc.save(safeFileName);
+        } catch (saveError) {
+          console.error('Erro ao salvar o PDF:', saveError);
+          // Tenta um método alternativo de download
+          const blob = doc.output('blob');
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = safeFileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar o PDF: ' + error.message);
+      }
+    }
+
+    // Render job postings
+    async function renderJobPostings() {
+      try {
+        jobPostingsList.innerHTML = '<p class="text-gray-600">Carregando...</p>';
+        const response = await fetch('api/save_job.php', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        jobPostings = data;
+        filterAndRenderJobs();
+      } catch (error) {
+        console.error('Erro ao buscar vagas:', error);
+        jobPostingsList.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+      }
+    }
+
+    // Função para filtrar e renderizar vagas
+    function filterAndRenderJobs() {
+      try {
+        const searchQuery = document.getElementById('jobSearchInput').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('jobStatusFilter').value;
+        const jobFilterStats = document.getElementById('jobFilterStats');
+
+        const filteredJobs = jobPostings.filter(job => {
+          const matchesSearch = !searchQuery || 
+            (job.company && job.company.toLowerCase().includes(searchQuery)) ||
+            (job.title && job.title.toLowerCase().includes(searchQuery));
+          const matchesStatus = !statusFilter || job.status === statusFilter;
+          return matchesSearch && matchesStatus;
+        });
+
+        // Atualizar estatísticas dos filtros
+        const totalJobs = jobPostings.length;
+        const filteredTotal = filteredJobs.length;
+        const statusText = statusFilter ? ` com status "${statusFilter}"` : '';
+        const searchText = searchQuery ? ` contendo "${searchQuery}"` : '';
+        
+        if (searchQuery || statusFilter) {
+          jobFilterStats.innerHTML = `
+            Mostrando ${filteredTotal} ${filteredTotal === 1 ? 'vaga' : 'vagas'}${statusText}${searchText} 
+            de um total de ${totalJobs} ${totalJobs === 1 ? 'vaga' : 'vagas'}
+            <button 
+              class="ml-2 text-accent hover:underline"
+              onclick="clearFilters()"
+            >
+              <i class="fas fa-times"></i> Limpar filtros
+            </button>
+          `;
+        } else {
+          jobFilterStats.innerHTML = `Mostrando todas as ${totalJobs} ${totalJobs === 1 ? 'vaga' : 'vagas'}`;
+        }
+
+        jobPostingsList.innerHTML = filteredJobs.length > 0
+          ? filteredJobs
+              .map((job) => {
+                const deadline = new Date(job.deadline);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffTime = deadline - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const daysText =
+                  diffDays > 0 ? `${diffDays} dias` : diffDays === 0 ? 'Hoje' : 'Encerrado';
+                const statusClasses = {
+                  Fechada: 'bg-green-100 text-green-800',
+                  Suspensa: 'bg-red-100 text-red-800',
+                  'Em Divulgação': 'bg-yellow-100 text-yellow-800',
+                  'Aguardando Retorno': 'bg-gray-100 text-gray-800',
+                };
+                const statusClass = statusClasses[job.status] || 'bg-gray-100 text-gray-800';
+                return `
+                  <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-gradient-to-l from-blue-50 to-transparent w-32 h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start gap-4 relative">
+                      <div class="flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                          <h3 class="text-lg font-semibold text-navy group-hover:text-blue-700 transition-colors">${job.title}</h3>
+                          <span class="status-badge ${statusClass} px-2.5 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                            ${job.status === 'Em Divulgação' ? '<i class="fas fa-broadcast-tower"></i>' : 
+                              job.status === 'Fechada' ? '<i class="fas fa-check-circle"></i>' : 
+                              job.status === 'Suspensa' ? '<i class="fas fa-pause-circle"></i>' : 
+                              '<i class="fas fa-clock"></i>'}
+                            ${job.status || 'Indefinido'}
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                          <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                            <i class="fas fa-building text-accent"></i>
+                            <span class="text-gray-700">${job.company}</span>
+                          </div>
+                          <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                            <i class="fas fa-map-marker-alt text-accent"></i>
+                            <span class="text-gray-700">${job.location}</span>
+                          </div>
+                          <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                            <i class="fas fa-calendar text-accent"></i>
+                            <span class="text-gray-700">Prazo: ${new Date(job.deadline).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                            <i class="fas fa-clock ${diffDays <= 3 ? 'text-red-500' : 'text-accent'}"></i>
+                            <span class="${diffDays <= 3 ? 'text-red-600 font-medium' : 'text-gray-700'}">${daysText}</span>
+                            ${diffDays <= 3 && diffDays > 0 ? `
+                              <span class="animate-pulse bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-full font-medium ml-auto">
+                                Urgente
+                              </span>
+                            ` : ''}
+                          </div>
+                          <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                            <i class="fas fa-users text-accent"></i>
+                            <span class="text-gray-700">
+                              ${job.quantidade || 1} ${job.quantidade === 1 ? 'vaga' : 'vagas'}
+                            </span>
+                          </div>
+                          ${job.salary_range ? `
+                            <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+                              <i class="fas fa-money-bill-wave text-accent"></i>
+                              <span class="text-gray-700">${job.salary_range}</span>
+                            </div>
+                          ` : ''}
+                        </div>
+                        <div class="text-sm text-gray-600 line-clamp-2 group-hover:line-clamp-none transition-all duration-300 mb-4">
+                          ${job.description}
+                        </div>
+                      </div>
+                      <div class="flex flex-wrap sm:flex-col gap-2 w-full sm:w-auto">
+                        <button
+                          class="view-job-details flex-1 sm:flex-none bg-accent text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2 justify-center"
+                          data-id="${job.id}"
+                        >
+                          <i class="fas fa-eye"></i> Detalhes
+                        </button>
+                        <button
+                          class="edit-job flex-1 sm:flex-none bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-yellow-700 transition flex items-center gap-2 justify-center"
+                          data-id="${job.id}"
+                        >
+                          <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button
+                          class="delete-job flex-1 sm:flex-none bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2 justify-center"
+                          data-id="${job.id}"
+                        >
+                          <i class="fas fa-trash"></i> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              })
+              .join('')
+          : `
+            <div class="bg-gray-50 rounded-xl p-8 text-center">
+              <div class="text-gray-400 text-5xl mb-4">
+                <i class="fas fa-search"></i>
+              </div>
+              <p class="text-gray-600 text-lg mb-2">Nenhuma vaga encontrada</p>
+              <p class="text-gray-500">Tente ajustar os filtros para ver mais resultados</p>
+            </div>
+          `;
+
+        document.querySelectorAll('.view-job-details').forEach((button) => {
+          button.removeEventListener('click', handleViewJobDetails);
+          button.addEventListener('click', handleViewJobDetails);
+        });
+        document.querySelectorAll('.edit-job').forEach((button) => {
+          button.removeEventListener('click', handleEditJob);
+          button.addEventListener('click', handleEditJob);
+        });
+        document.querySelectorAll('.delete-job').forEach((button) => {
+          button.removeEventListener('click', handleDeleteJob);
+          button.addEventListener('click', handleDeleteJob);
+        });
+      } catch (error) {
+        console.error('Erro ao renderizar vagas:', error);
+        jobPostingsList.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+      }
+    }
+
+    function handleEditJob(event) {
+      const id = event.target.getAttribute('data-id');
+      editJobPosting(id);
+    }
+
+    function handleDeleteJob(event) {
+      const id = event.target.getAttribute('data-id');
+      deleteJobPosting(id);
+    }
+
+    // Create job posting
+    jobCreationForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const job = {
+        id: generateUUID(),
+        company: document.getElementById('jobCompany').value,
+        title: document.getElementById('jobTitle').value,
+        description: document.getElementById('jobDescription').value,
+        requirements: document.getElementById('jobRequirements').value,
+        keywords: document.getElementById('jobKeywords').value.trim() || null,
+        location: document.getElementById('jobLocation').value,
+        salary_range: document.getElementById('jobSalaryRange').value || null,
+        deadline: document.getElementById('jobDeadline').value,
+        status: document.getElementById('jobStatus').value,
+        quantidade: parseInt(document.getElementById('jobQuantity').value) || 1,
+        date_fechamento: document.getElementById('jobClosingDate').value || null,
+      };
+
+      if (!job.company || !job.title || !job.description || !job.requirements || !job.location || !job.deadline) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+
+      try {
+        const response = await fetch('api/save_job.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(job),
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          jobPostings.push(job);
+          jobCreationForm.reset();
+          jobCreationModal.classList.remove('show');
+          setTimeout(() => jobCreationModal.classList.add('hidden'), 300);
+          renderJobPostings();
+          fetchInscritos();
+          alert('Vaga criada com sucesso!');
+        } else {
+          throw new Error(result.error || 'Erro ao criar vaga');
+        }
+      } catch (error) {
+        console.error('Erro ao criar vaga:', error);
+        alert('Erro ao criar vaga: ' + error.message);
+      }
+    });
+
+    // Edit job posting
+    function editJobPosting(id) {
+      const job = jobPostings.find((j) => j.id === id);
+      if (job) {
+        document.getElementById('editJobId').value = job.id;
+        document.getElementById('editJobCompany').value = job.company;
+        document.getElementById('editJobTitle').value = job.title;
+        document.getElementById('editJobDescription').value = job.description;
+        document.getElementById('editJobRequirements').value = job.requirements;
+        document.getElementById('editJobKeywords').value = job.keywords || '';
+        document.getElementById('editJobLocation').value = job.location;
+        document.getElementById('editJobSalaryRange').value = job.salary_range || '';
+        document.getElementById('editJobDeadline').value = job.deadline;
+        document.getElementById('editJobStatus').value = job.status;
+        document.getElementById('editJobQuantity').value = job.quantidade || 1;
+        document.getElementById('editJobClosingDate').value = job.date_fechamento || '';
+        jobEditModal.classList.remove('hidden');
+        setTimeout(() => jobEditModal.querySelector('.modal').classList.add('show'), 10);
+      }
+    }
+
+    jobEditForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('editJobStatus').value;
+      const candidato = status === 'Fechada' ? document.getElementById('editJobCandidato').value : null;
+
+      const job = {
+        id: document.getElementById('editJobId').value,
+        company: document.getElementById('editJobCompany').value,
+        title: document.getElementById('editJobTitle').value,
+        description: document.getElementById('editJobDescription').value,
+        requirements: document.getElementById('editJobRequirements').value,
+        keywords: document.getElementById('editJobKeywords').value.trim() || null,
+        location: document.getElementById('editJobLocation').value,
+        salary_range: document.getElementById('editJobSalaryRange').value || null,
+        deadline: document.getElementById('editJobDeadline').value,
+        status: status,
+        quantidade: parseInt(document.getElementById('editJobQuantity').value) || 1,
+        date_fechamento: document.getElementById('editJobClosingDate').value || null,
+        candidato: candidato
+      };
+
+      if (!job.company || !job.title || !job.description || !job.requirements || !job.location || !job.deadline) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+
+     try {
+  const response = await fetch('api/save_job.php', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(job),
+  });
+  const result = await response.json();
+  if (response.ok && result.success) {
+    const index = jobPostings.findIndex((j) => j.id === job.id);
+    if (index !== -1) {
+      jobPostings[index] = job; // Update the job in the array
+    }
+    jobEditForm.reset();
+    jobEditModal.querySelector('.modal').classList.remove('show');
+    setTimeout(() => jobEditModal.classList.add('hidden'), 300);
+    renderJobPostings();
+    fetchInscritos();
+    alert('Vaga atualizada com sucesso!');
+  } else {
+    throw new Error(result.error || 'Erro ao atualizar vaga');
+  }
+} catch (error) {
+  console.error('Erro ao atualizar vaga:', error);
+  alert('Erro ao atualizar vaga: ' + error.message);
+}
+});
+
+closeJobEditModal.addEventListener('click', () => {
+  jobEditModal.querySelector('.modal').classList.remove('show');
+  setTimeout(() => jobEditModal.classList.add('hidden'), 300);
+});
+
+// Delete job posting
+async function deleteJobPosting(id) {
+  if (!confirm('Tem certeza que deseja excluir esta vaga?')) return;
+  try {
+    const response = await fetch('api/save_job.php', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const result = await response.json();
+    if (response.ok && result.success) {
+      jobPostings = jobPostings.filter((job) => job.id !== id);
+      renderJobPostings();
+      fetchInscritos();
+      alert('Vaga excluída com sucesso!');
+    } else {
+      throw new Error(result.error || 'Erro ao excluir vaga');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir vaga:', error);
+    alert('Erro ao excluir vaga: ' + error.message);
+  }
+}
+
+// View job details
+function viewJobDetails(id) {
+  try {
+    const job = jobPostings.find((j) => j.id === id);
+    if (!job) throw new Error('Vaga não encontrada');
+    jobDetailsContent.innerHTML = `
+      <p><strong>Nome da Empresa:</strong> ${job.company}</p>
+      <p><strong>Título da Vaga:</strong> ${job.title}</p>
+      <p><strong>Descrição:</strong> ${job.description}</p>
+      <p><strong>Requisitos:</strong> ${job.requirements}</p>
+      <p><strong>Palavras-chave:</strong> ${job.keywords || '-'}</p>
+      <p><strong>Localização:</strong> ${job.location}</p>
+      <p><strong>Faixa Salarial:</strong> ${job.salary_range || '-'}</p>
+      <p><strong>Prazo de Inscrição:</strong> ${new Date(job.deadline).toLocaleDateString('pt-BR')}</p>
+      <p><strong>Status:</strong> ${job.status}</p>
+      <p><strong>Quantidade de Vagas:</strong> ${job.quantidade || 1}</p>
+      <p><strong>Data de Fechamento:</strong> ${
+        job.date_fechamento ? new Date(job.date_fechamento).toLocaleDateString('pt-BR') : '-'
+      }</p>
+      ${job.status === 'Fechada' && job.candidato ? `
+        <p><strong>Candidato Selecionado:</strong> 
+          <button
+            class="view-resume-details text-accent hover:underline"
+            data-email="${job.candidato}"
+          >
+            ${job.candidato}
+          </button>
+        </p>
+      ` : ''}
+      <div class="mt-4">
+        <button
+          id="sendProposalButton"
+          class="bg-green-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-2"
+        >
+          <i class="fas fa-paper-plane"></i> Enviar Proposta
+        </button>
+      </div>
+    `;
+
+    // Adicionar event listener para o botão de enviar proposta
+    const sendProposalButton = jobDetailsContent.querySelector('#sendProposalButton');
+    if (sendProposalButton) {
+      sendProposalButton.addEventListener('click', () => {
+        showProposalModal(job);
+      });
+    }
+
+    // Adicionar event listener para o botão de ver candidato
+    const viewResumeButton = jobDetailsContent.querySelector('.view-resume-details');
+    if (viewResumeButton) {
+      viewResumeButton.addEventListener('click', (e) => {
+        const email = e.target.dataset.email;
+        const resume = resumes.find(r => r.email === email);
+        if (resume) {
+          const index = resumes.indexOf(resume);
+          showDetails(resume, index);
+        }
+      });
+    }
+
+    jobDetailsModal.classList.remove('hidden');
+    setTimeout(() => jobDetailsModal.querySelector('.modal').classList.add('show'), 10);
+  } catch (error) {
+    console.error('Erro ao exibir detalhes da vaga:', error);
+    jobDetailsContent.innerHTML = `<p class="text-red-600">Erro: ${error.message}</p>`;
+  }
+}
+
+closeJobDetailsModal.addEventListener('click', () => {
+  jobDetailsModal.querySelector('.modal').classList.remove('show');
+  setTimeout(() => jobDetailsModal.classList.add('hidden'), 300);
+});
+
+closeCandidatesModal.addEventListener('click', () => {
+  candidatesModal.querySelector('.modal').classList.remove('show');
+  setTimeout(() => candidatesModal.classList.add('hidden'), 300);
+});
+
+// Search resumes
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.trim().toLowerCase();
+  const filteredResumes = resumes.filter(
+    (resume) =>
+      resume.nome.toLowerCase().includes(query) ||
+      resume.email.toLowerCase().includes(query) ||
+      (resume.area && resume.area.toLowerCase().includes(query))
+  );
+  renderTable(filteredResumes);
+});
+
+// Search inscritos
+/* Comentado pois searchInscritosInput não existe mais e estava causando TypeError
+searchInscritosInput.addEventListener('input', () => {
+  const query = searchInscritosInput.value.trim().toLowerCase();
+  const filteredInscritos = inscritos.filter(
+    (vaga) =>
+      (vaga.title && vaga.title.toLowerCase().includes(query)) ||
+      (vaga.company && vaga.company.toLowerCase().includes(query))
+  );
+  renderInscritos(filteredInscritos);
+});
+*/
+
+// Open job creation modal
+createJobButton.addEventListener('click', () => {
+  jobCreationModal.classList.remove('hidden');
+  setTimeout(() => jobCreationModal.querySelector('.modal').classList.add('show'), 10);
+});
+
+// Close job creation modal
+closeJobCreationModal.addEventListener('click', () => {
+  jobCreationModal.querySelector('.modal').classList.remove('show');
+  setTimeout(() => jobCreationModal.classList.add('hidden'), 300);
+});
+
+// Close resume details modal
+closeModal.addEventListener('click', () => {
+  detailsModal.querySelector('.modal').classList.remove('show');
+  setTimeout(() => detailsModal.classList.add('hidden'), 300);
+});
+
+// Initialize tabs
+statsTabButton.click();
+
+    // Função para carregar estatísticas
+    async function loadStats(dataInicio = null, dataFim = null) {
+      try {
+        console.log('Iniciando carregamento de estatísticas');
+        console.log('API_BASE_URL:', API_BASE_URL);
+        
+        // Mostrar indicador de carregamento
+        document.getElementById('totalCurriculos').textContent = 'Carregando...';
+        document.getElementById('curriculosHoje').textContent = 'Carregando...';
+        document.getElementById('vagasAbertas').textContent = 'Carregando...';
+        document.getElementById('vagasFechadasTotal').textContent = 'Carregando...';
+
+        let url = `${API_BASE_URL}/get_stats.php`;
+        if (dataInicio && dataFim) {
+          url += `?data_inicio=${dataInicio}&data_fim=${dataFim}`;
+        }
+        
+        console.log('Fazendo requisição para:', url);
+        const response = await fetch(url);
+        console.log('Status da resposta:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+        
+        if (!data || !data.stats || !data.stats_vagas) {
+          throw new Error('Dados inválidos recebidos do servidor');
+        }
+
+        // Atualizar cards com os dados recebidos
+        document.getElementById('totalCurriculos').textContent = data.stats.total_curriculos || '0';
+        document.getElementById('curriculosHoje').textContent = data.stats.curriculos_hoje || '0';
+        document.getElementById('vagasAbertas').textContent = data.stats_vagas.vagas_abertas || '0';
+        document.getElementById('posicoesAbertas').textContent = 
+          `${data.stats_vagas.total_posicoes_abertas || '0'} posições disponíveis`;
+        document.getElementById('vagasFechadasTotal').textContent = data.stats_vagas.vagas_fechadas || '0';
+        document.getElementById('mediaFechamento').textContent = 
+          `Média de ${Math.round(data.media_fechamento?.media_dias_fechamento || 0)} dias para fechamento`;
+
+        // Atualizar gráfico de status das vagas
+        try {
+          console.log('Iniciando atualização do gráfico de status');
+          const ctxStatus = document.getElementById('statusVagasChart');
+          if (!ctxStatus) {
+            throw new Error('Canvas para gráfico de status não encontrado');
+          }
+
+          // Destruir gráfico existente se houver
+          if (window.statusVagasChart && typeof window.statusVagasChart === 'object') {
+            try {
+              window.statusVagasChart.destroy();
+            } catch (e) {
+              console.warn('Erro ao destruir gráfico existente:', e);
+            }
+          }
+          window.statusVagasChart = null;
+
+          // Preparar dados do gráfico
+          const statusData = {
+            labels: ['Em Divulgação', 'Suspensa', 'Aguardando Retorno', 'Fechada'],
+            datasets: [{
+              data: [
+                parseInt(data.stats_vagas.vagas_abertas) || 0,
+                parseInt(data.stats_vagas.vagas_suspensas) || 0,
+                parseInt(data.stats_vagas.vagas_aguardando) || 0,
+                parseInt(data.stats_vagas.vagas_fechadas) || 0
+              ],
+              backgroundColor: ['#eab308', '#ef4444', '#64748b', '#22c55e']
+            }]
+          };
+
+          console.log('Dados do gráfico:', statusData);
+
+          // Criar novo gráfico
+          window.statusVagasChart = new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: statusData,
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+
+          console.log('Gráfico de status criado com sucesso');
+
+        } catch (chartError) {
+          console.error('Erro ao criar gráfico de status:', chartError);
+          const statusContainer = document.getElementById('statusVagasChart');
+          if (statusContainer) {
+            statusContainer.innerHTML = `<p class="text-red-600 p-4">Erro ao carregar gráfico: ${chartError.message}</p>`;
+          }
+        }
+
+        // Atualizar gráfico de evolução
+        try {
+          console.log('Iniciando atualização do gráfico de evolução');
+          const ctxEvolucao = document.getElementById('evolucaoVagasChart');
+          if (!ctxEvolucao) {
+            throw new Error('Canvas para gráfico de evolução não encontrado');
+          }
+
+          // Destruir gráfico existente se houver
+          if (window.evolucaoVagasChart && typeof window.evolucaoVagasChart === 'object') {
+            try {
+              window.evolucaoVagasChart.destroy();
+            } catch (e) {
+              console.warn('Erro ao destruir gráfico existente:', e);
+            }
+          }
+          window.evolucaoVagasChart = null;
+
+          // Verificar dados de evolução
+          if (!Array.isArray(data.vagas_por_mes)) {
+            throw new Error('Dados de evolução inválidos');
+          }
+
+          // Converter mês/ano para nomes dos meses
+          const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          const evolucaoData = {
+            labels: data.vagas_por_mes.map(item => {
+              const [ano, mes] = (item.mes || '').split('-');
+              return mes && ano ? `${meses[parseInt(mes) - 1]}/${ano.slice(2)}` : '';
+            }).filter(Boolean),
+            datasets: [
+              {
+                label: 'Total de Vagas',
+                data: data.vagas_por_mes.map(item => parseInt(item.total_vagas) || 0),
+                borderColor: '#2563eb',
+                backgroundColor: '#2563eb20',
+                fill: true,
+                tension: 0.4
+              },
+              {
+                label: 'Vagas Fechadas',
+                data: data.vagas_por_mes.map(item => parseInt(item.vagas_fechadas) || 0),
+                borderColor: '#22c55e',
+                backgroundColor: '#22c55e20',
+                fill: true,
+                tension: 0.4
+              }
+            ]
+          };
+
+          console.log('Dados do gráfico de evolução:', evolucaoData);
+
+          // Criar novo gráfico de evolução
+          window.evolucaoVagasChart = new Chart(ctxEvolucao, {
+            type: 'line',
+            data: evolucaoData,
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1
+                  }
+                }
+              },
+              interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+              }
+            }
+          });
+
+          console.log('Gráfico de evolução criado com sucesso');
+
+        } catch (chartError) {
+          console.error('Erro ao criar gráfico de evolução:', chartError);
+          const evolucaoContainer = document.getElementById('evolucaoVagasChart');
+          if (evolucaoContainer) {
+            evolucaoContainer.innerHTML = `<p class="text-red-600 p-4">Erro ao carregar gráfico: ${chartError.message}</p>`;
+          }
+        }
+
+        // Atualizar áreas de interesse
+        const areasContainer = document.getElementById('areasInteresse');
+        if (areasContainer) {
+          areasContainer.innerHTML = data.areas_interesse && Array.isArray(data.areas_interesse)
+            ? data.areas_interesse.map(area => `
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium">${area.area_interesse || 'Não especificada'}</span>
+                    <span class="bg-accent text-white px-3 py-1 rounded-full text-sm">${area.total || 0}</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-accent h-2 rounded-full" style="width: ${((area.total || 0) / (data.stats.curriculos_periodo || 1) * 100)}%"></div>
+                  </div>
+                </div>
+              `).join('')
+            : '<p class="text-gray-600">Nenhuma área de interesse registrada.</p>';
+        }
+
+        // Atualizar áreas com mais vagas
+        const areasVagasContainer = document.getElementById('areasVagas');
+        if (areasVagasContainer) {
+          areasVagasContainer.innerHTML = data.top_areas_vagas && Array.isArray(data.top_areas_vagas)
+            ? data.top_areas_vagas.map(area => `
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-navy">${area.area_principal || 'Não especificada'}</span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm text-gray-600">${((area.total / data.stats_vagas.total_vagas) * 100).toFixed(1)}%</span>
+                      <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm">${area.total || 0}</span>
+                    </div>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div class="bg-yellow-500 h-2.5 rounded-full transition-all duration-500" style="width: ${((area.total || 0) / (data.stats_vagas.total_vagas || 1) * 100)}%"></div>
+                  </div>
+                </div>
+              `).join('')
+            : '<p class="text-gray-600">Nenhuma área com vagas registrada.</p>';
+        }
+
+        // Atualizar vagas fechadas
+        const vagasFechadasContainer = document.getElementById('vagasFechadas');
+        if (vagasFechadasContainer) {
+          vagasFechadasContainer.innerHTML = data.vagas_fechadas && Array.isArray(data.vagas_fechadas) && data.vagas_fechadas.length > 0
+            ? data.vagas_fechadas.map(vaga => `
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <div class="flex justify-between items-center mb-2">
+                    <div>
+                      <h4 class="font-medium text-navy">${vaga.title || 'Sem título'}</h4>
+                      <p class="text-sm text-gray-600">${vaga.company || 'Empresa não especificada'}</p>
+                    </div>
+                    ${vaga.candidato ? `
+                      <button
+                        class="view-resume-details text-accent hover:underline text-sm"
+                        data-email="${vaga.candidato}"
+                      >
+                        Ver Candidato
+                      </button>
+                    ` : ''}
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    <p>Data de Fechamento: ${vaga.date_fechamento ? new Date(vaga.date_fechamento).toLocaleDateString('pt-BR') : 'Não especificada'}</p>
+                  </div>
+                </div>
+              `).join('')
+            : '<p class="text-gray-600">Nenhuma vaga fechada no período.</p>';
+
+          // Reativar os event listeners para os botões de ver candidato
+          document.querySelectorAll('.view-resume-details').forEach(button => {
+            button.addEventListener('click', (e) => {
+              const email = e.target.dataset.email;
+              const resume = resumes.find(r => r.email === email);
+              if (resume) {
+                const index = resumes.indexOf(resume);
+                showDetails(resume, index);
+              }
+            });
+          });
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+        // Mostrar mensagem de erro nos containers
+        const elements = {
+          'totalCurriculos': 'Erro',
+          'curriculosHoje': 'Erro',
+          'vagasAbertas': 'Erro',
+          'vagasFechadasTotal': 'Erro'
+        };
+        
+        for (const [id, text] of Object.entries(elements)) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = text;
+          }
+        }
+        
+        // Limpar outros containers
+        const containers = ['areasInteresse', 'areasVagas', 'vagasFechadas'];
+        containers.forEach(id => {
+          const container = document.getElementById(id);
+          if (container) {
+            container.innerHTML = `<p class="text-red-600">Erro ao carregar dados: ${error.message}</p>`;
+          }
+        });
+      }
+    }
+
+    // Evento de filtro
+    statsFilter.addEventListener('click', () => {
+      loadStats(statsDataInicio.value, statsDataFim.value);
+    });
+
+    // Adicionar loadStats à função switchTab
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-button').forEach((btn) => {
+        btn.classList.remove('bg-accent');
+        btn.classList.add('hover:bg-accent/80');
+      });
+      document.querySelectorAll('.tab-content').forEach((content) => content.classList.add('hidden'));
+      document.querySelector(`[data-tab="${tabId}"]`).classList.add('bg-accent');
+      document.getElementById(tabId).classList.remove('hidden');
+      if (tabId === 'resume-tab') {
+        fetchResumes();
+      } else if (tabId === 'jobs-tab') {
+        renderJobPostings();
+      } else if (tabId === 'matches-tab') {
+        renderMatches();
+      } else if (tabId === 'inscritos-tab') {
+        fetchInscritos();
+      } else if (tabId === 'stats-tab') {
+        loadStats(statsDataInicio.value, statsDataFim.value);
+      }
+      if (window.innerWidth <= 768) sidebar.classList.remove('open');
+    }
+
+    // ... rest of existing code ...
+
+    // Adicionar no JavaScript, antes do final do arquivo
+    // Event listeners para os filtros de currículo
+    document.getElementById('applyFilters').addEventListener('click', () => {
+      fetchResumes();
+      document.getElementById('downloadFiltered').disabled = false;
+    });
+
+    // Adicionar função para toggle do select de candidato
+    function toggleCandidatoSelect(status) {
+      const container = document.getElementById('candidatoSelectContainer');
+      if (status === 'Fechada') {
+        container.classList.remove('hidden');
+        loadCandidatos();
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    // Carregar candidatos para o select
+    async function loadCandidatos() {
+      try {
+        const response = await fetch('api/get_resumes.php');
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const data = await response.json();
+        
+        const select = document.getElementById('editJobCandidato');
+        select.innerHTML = '<option value="">Selecione o candidato</option>';
+        
+        data.forEach(candidato => {
+          select.innerHTML += `<option value="${candidato.email}">${candidato.nome} (${candidato.email})</option>`;
+        });
+      } catch (error) {
+        console.error('Erro ao carregar candidatos:', error);
+      }
+    }
+
+    // Função para limpar os filtros
+    function clearFilters() {
+      document.getElementById('jobSearchInput').value = '';
+      document.getElementById('jobStatusFilter').value = '';
+      filterAndRenderJobs();
+    }
+
+    // Adicionar debounce para o campo de pesquisa
+    let searchTimeout;
+    document.getElementById('jobSearchInput').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        filterAndRenderJobs();
+      }, 300);
+    });
+
+    document.getElementById('jobStatusFilter').addEventListener('change', filterAndRenderJobs);
+  </script>
+
+  <!-- Proposal Modal -->
+  <div id="proposalModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+    <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-2xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+      <!-- Modern Header -->
+      <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+        <div class="relative bg-gradient-to-r from-green-600 via-green-700 to-green-500 px-8 py-6 flex items-center gap-4 shadow-lg">
+          <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+            <i class="fas fa-paper-plane text-white text-4xl"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-extrabold text-white mb-1 drop-shadow">Enviar Proposta</h2>
+            <p class="text-green-100 text-sm font-medium">Preencha os dados para enviar a proposta</p>
+          </div>
+          <button
+            id="closeProposalModal"
+            class="absolute top-4 right-4 bg-white/80 hover:bg-white text-green-600 rounded-full p-2 shadow-lg transition"
+            title="Fechar"
+            style="z-index:20"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+        <form id="proposalForm" class="space-y-4">
+          <input type="hidden" id="proposalJobId">
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700">Vaga</label>
+            <input
+              type="text"
+              id="proposalJobTitle"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-600 transition bg-gray-50"
+              readonly
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700">Empresa</label>
+            <input
+              type="text"
+              id="proposalCompany"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-600 transition bg-gray-50"
+              readonly
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700">Candidato</label>
+            <select
+              id="proposalCandidate"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-600 transition bg-gray-50"
+              required
+            >
+              <option value="">Selecione o candidato</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700">Data de Início</label>
+            <input
+              type="date"
+              id="proposalStartDate"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-600 transition bg-gray-50"
+              required
+            />
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              id="cancelProposalModal"
+              class="bg-gray-200 text-gray-700 py-2 px-6 rounded-lg font-medium hover:bg-gray-300 transition flex items-center gap-2"
+            >
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button
+              type="submit"
+              class="bg-green-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-2"
+            >
+              <i class="fab fa-whatsapp"></i> Enviar via WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ... existing code ...
+
+    // Função para mostrar o modal de proposta
+    function showProposalModal(job) {
+      const modal = document.getElementById('proposalModal');
+      const form = document.getElementById('proposalForm');
+      const jobIdInput = document.getElementById('proposalJobId');
+      const jobTitleInput = document.getElementById('proposalJobTitle');
+      const companyInput = document.getElementById('proposalCompany');
+      const candidateSelect = document.getElementById('proposalCandidate');
+      const startDateInput = document.getElementById('proposalStartDate');
+
+      // Preencher dados da vaga
+      jobIdInput.value = job.id;
+      jobTitleInput.value = job.title;
+      companyInput.value = job.company;
+
+      // Limpar e preencher select de candidatos
+      candidateSelect.innerHTML = '<option value="">Selecione o candidato</option>';
+      resumes.forEach(resume => {
+        candidateSelect.innerHTML += `
+          <option value="${resume.email}" data-phone="${resume.telefone}" data-name="${resume.nome}">
+            ${resume.nome} (${resume.email})
+          </option>
+        `;
+      });
+
+      // Definir data mínima como hoje
+      const today = new Date().toISOString().split('T')[0];
+      startDateInput.min = today;
+      startDateInput.value = today;
+
+      // Mostrar modal
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.querySelector('.modal').classList.add('show'), 10);
+
+      // Event listener para o formulário
+      form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const selectedOption = candidateSelect.selectedOptions[0];
+        const candidateName = selectedOption.dataset.name;
+        const candidatePhone = selectedOption.dataset.phone;
+        const startDate = new Date(startDateInput.value).toLocaleDateString('pt-BR');
+        
+        if (!candidatePhone) {
+          alert('O candidato selecionado não possui número de telefone cadastrado.');
+          return;
+        }
+
+        // Montar mensagem do WhatsApp com quebras de linha usando %0A
+        const message = `Bom dia ${candidateName}! Tudo bem?%0A%0AParabéns! Você foi aprovada em todas as etapas do processo seletivo para vaga de ${job.title} da ${job.company}. Muito provável que você começará no dia ${startDate}.%0ASobre as demais informações do dia de início das atividades e horário o setor responsável entrará em contato até dias 4 dias antes.%0A%0ADesejos sucesso nessa nova etapa!🙏🏻🍀%0AAbraços!`;
+
+        // Criar link do WhatsApp com a mensagem já codificada
+        const phoneNumber = candidatePhone.replace(/\D/g, '').replace(/^0/, '').padStart(13, '55');
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+
+        console.log('URL do WhatsApp:', whatsappUrl); // Para debug
+
+        // Abrir WhatsApp em nova aba
+        window.open(whatsappUrl, '_blank');
+
+        // Fechar modal
+        closeProposalModal();
+      };
+    }
+
+    // Função para fechar o modal de proposta
+    function closeProposalModal() {
+      const modal = document.getElementById('proposalModal');
+      modal.querySelector('.modal').classList.remove('show');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    // Event listeners para fechar o modal
+    document.getElementById('closeProposalModal').addEventListener('click', closeProposalModal);
+    document.getElementById('cancelProposalModal').addEventListener('click', closeProposalModal);
+    document.getElementById('proposalModal').addEventListener('mousedown', function(e) {
+      if (!this.querySelector('.modal').contains(e.target)) {
+        closeProposalModal();
+      }
+    });
+
+    // ... existing code ...
+  </script>
+
+  <!-- Add Candidato to Processo Seletivo Modal -->
+  <div id="addCandidatoProcessoModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+    <div class="bg-gradient-to-br from-white via-blue-50 to-blue-100 rounded-3xl shadow-2xl p-0 max-w-xl w-full max-h-[85vh] overflow-y-visible modal border-2 border-accent/30 relative">
+      <!-- Modern Header -->
+      <div class="sticky top-0 z-20 rounded-t-3xl overflow-hidden">
+        <div class="relative bg-gradient-to-r from-teal-500 via-teal-600 to-teal-400 px-8 py-6 flex items-center gap-4 shadow-lg">
+          <div class="bg-white/20 rounded-full p-4 border-4 border-white/30 shadow">
+            <i class="fas fa-user-plus text-white text-4xl"></i>
+          </div>
+          <div>
+            <h2 id="addCandidatoModalTitle" class="text-3xl font-extrabold text-white mb-1 drop-shadow">Adicionar Candidato à Vaga</h2>
+            <p class="text-teal-100 text-sm font-medium">Selecione um candidato para incluir no processo seletivo.</p>
+          </div>
+          <button
+            id="closeAddCandidatoModal"
+            type="button"
+            class="absolute top-4 right-4 bg-white/80 hover:bg-white text-teal-600 rounded-full p-2 shadow-lg transition"
+            title="Fechar"
+            style="z-index:20"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="px-8 py-6 custom-scrollbar" style="max-height:65vh;overflow-y:auto;">
+        <form id="addCandidatoProcessoForm" class="space-y-4">
+          <input type="hidden" id="addCandidatoVagaId">
+          <div>
+            <label for="addCandidatoSelect" class="block text-sm font-medium mb-1 text-gray-700">Candidato:</label>
+            <select
+              id="addCandidatoSelect"
+              name="candidato_email"
+              required
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-teal-500 transition bg-gray-50"
+            >
+              <option value="">Carregando candidatos...</option>
+            </select>
+            <p id="addCandidatoError" class="text-red-500 text-sm mt-1 hidden"></p>
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              id="cancelAddCandidatoModal"
+              class="bg-gray-200 text-gray-700 py-2 px-6 rounded-lg font-medium hover:bg-gray-300 transition flex items-center gap-2"
+            >
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button
+              type="submit"
+              class="bg-teal-600 text-white py-2 px-6 rounded-lg font-medium hover:bg-teal-700 transition flex items-center gap-2"
+            >
+              <i class="fas fa-plus"></i> Adicionar Candidato
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Todas as funções JavaScript existentes devem estar aqui ou em arquivos linkados.
+    // Adicionando a nova lógica para Processo Seletivo.
+
+    const processoSeletivoTab = document.getElementById('processo-seletivo-tab');
+    const vagaFilterSelect = document.getElementById('vagaFilterProcessoSeletivo');
+    const processoSeletivoContentArea = document.getElementById('processo-seletivo-content-area');
+    const loadingProcessoSeletivo = document.getElementById('loadingProcessoSeletivo');
+    const processoSeletivoTabButton = document.getElementById('processoSeletivoTabButton');
+
+    const statusOptions = ['Inscrito', 'Triagem', 'Entrevista Agendada', 'Entrevistado', 'Aprovado', 'Rejeitado', 'Contratado'];
+    let allProcessoSeletivoData = []; // Para armazenar os dados carregados e filtrar localmente
+
+    async function fetchProcessoSeletivoData(vagaId = null) {
+      loadingProcessoSeletivo.style.display = 'block';
+      processoSeletivoContentArea.innerHTML = ''; // Limpa conteúdo anterior
+      try {
+        // CORRIGIDO: Caminho da API para get_processo_seletivo_data.php
+        const url = vagaId ? `api/get_processo_seletivo_data.php?vaga_id=${vagaId}` : 'api/get_processo_seletivo_data.php';
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.success && result.data) {
+          allProcessoSeletivoData = result.data; // Armazena todos os dados
+          populateVagaFilter(result.data);
+          displayProcessoSeletivoData(result.data);
+        } else {
+          processoSeletivoContentArea.innerHTML = `<p class="text-red-500">Erro ao carregar dados: ${result.message || 'Resposta inválida da API.'}</p>`;
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do processo seletivo:", error);
+        processoSeletivoContentArea.innerHTML = `<p class="text-red-500">Não foi possível carregar os dados do processo seletivo. Verifique o console para mais detalhes.</p>`;
+      } finally {
+        loadingProcessoSeletivo.style.display = 'none';
+      }
+    }
+
+    function populateVagaFilter(data) {
+        const currentFilterValue = vagaFilterSelect.value;
+        // Limpa opções existentes, exceto a primeira ("Todas as Vagas")
+        while (vagaFilterSelect.options.length > 1) {
+            vagaFilterSelect.remove(1);
+        }
+
+        const uniqueVagas = {};
+        data.forEach(vagaGroup => {
+            if (vagaGroup.vaga_info && !uniqueVagas[vagaGroup.vaga_info.id]) {
+                uniqueVagas[vagaGroup.vaga_info.id] = vagaGroup.vaga_info.titulo;
+            }
+        });
+
+        for (const id in uniqueVagas) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = uniqueVagas[id];
+            vagaFilterSelect.appendChild(option);
+        }
+        vagaFilterSelect.value = currentFilterValue; // Restaura a seleção anterior se possível
+    }
+
+    function displayProcessoSeletivoData(data) {
+      processoSeletivoContentArea.innerHTML = ''; // Limpa antes de exibir
+      if (data.length === 0) {
+        processoSeletivoContentArea.innerHTML = '<p class="text-gray-500 text-center">Nenhum dado de processo seletivo encontrado.</p>';
+        return;
+      }
+
+      data.forEach(vagaGroup => {
+        if (!vagaGroup.vaga_info || !vagaGroup.candidatos) return;
+
+        const vagaContainer = document.createElement('div');
+        vagaContainer.className = 'bg-gray-50 p-6 rounded-lg shadow mb-8'; // Adicionado mb-8 para espaçamento
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'flex justify-between items-center mb-4';
+
+        const vagaTitle = document.createElement('h3');
+        vagaTitle.className = 'text-xl font-semibold text-navy';
+        vagaTitle.textContent = `${vagaGroup.vaga_info.titulo} (${vagaGroup.vaga_info.empresa || 'N/A'})`;
+        headerDiv.appendChild(vagaTitle);
+
+        const addCandidatoButton = document.createElement('button');
+        addCandidatoButton.innerHTML = '<i class="fas fa-plus mr-2"></i>Adicionar Candidato';
+        addCandidatoButton.className = 'bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 rounded-lg font-medium transition text-sm flex items-center';
+        addCandidatoButton.onclick = () => openAddCandidatoModal(vagaGroup.vaga_info.id, vagaGroup.vaga_info.titulo);
+        headerDiv.appendChild(addCandidatoButton);
+
+        vagaContainer.appendChild(headerDiv);
+
+        if (vagaGroup.candidatos.length === 0) {
+          const noCandidatosText = document.createElement('p');
+          noCandidatosText.className = 'text-gray-500';
+          noCandidatosText.textContent = 'Nenhum candidato inscrito para esta vaga no momento.';
+          vagaContainer.appendChild(noCandidatosText);
+        } else {
+          const table = document.createElement('table');
+          table.className = 'min-w-full divide-y divide-gray-200 text-sm';
+          table.innerHTML = `
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Candidato</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Data Entrevista</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Observações</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Currículo</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-600 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200"></tbody>
+          `;
+          const tbody = table.querySelector('tbody');
+
+          vagaGroup.candidatos.forEach(candidato => {
+            const row = tbody.insertRow();
+            row.dataset.idCandidaturaVaga = candidato.id_candidatura_vaga; // Para identificar a linha
+
+            row.insertCell().textContent = `${candidato.candidato_nome} (${candidato.candidato_email})`;
+
+            // Status (Select)
+            const statusCell = row.insertCell();
+            const statusSelect = document.createElement('select');
+            statusSelect.className = 'mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+            statusSelect.name = 'status_selecao';
+            statusOptions.forEach(opt => {
+              const optionEl = document.createElement('option');
+              optionEl.value = opt;
+              optionEl.textContent = opt;
+              if (opt === candidato.status_selecao) optionEl.selected = true;
+              statusSelect.appendChild(optionEl);
+            });
+            statusCell.appendChild(statusSelect);
+
+            // Data Entrevista (Input)
+            const dataEntrevistaCell = row.insertCell();
+            const dataEntrevistaInput = document.createElement('input');
+            dataEntrevistaInput.type = 'datetime-local';
+            dataEntrevistaInput.className = 'mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+            dataEntrevistaInput.name = 'data_entrevista';
+            dataEntrevistaInput.value = candidato.data_entrevista_original ? candidato.data_entrevista_original.replace(' ', 'T') : ''; // Formato para datetime-local
+            dataEntrevistaCell.appendChild(dataEntrevistaInput);
+
+            // Observações (Textarea)
+            const observacoesCell = row.insertCell();
+            const observacoesTextarea = document.createElement('textarea');
+            observacoesTextarea.className = 'mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+            observacoesTextarea.rows = 2;
+            observacoesTextarea.name = 'observacoes_entrevista';
+            observacoesTextarea.textContent = candidato.observacoes_entrevista || '';
+            observacoesCell.appendChild(observacoesTextarea);
+
+            // Currículo Link
+            const curriculoCell = row.insertCell();
+            if (candidato.curriculo_link) {
+              const link = document.createElement('a');
+              link.href = candidato.curriculo_link;
+              link.textContent = 'Ver Currículo';
+              link.target = '_blank';
+              link.className = 'text-blue-600 hover:text-blue-800 hover:underline';
+              curriculoCell.appendChild(link);
+            } else {
+              curriculoCell.textContent = 'N/D';
+            }
+
+            // Ações (Botões Salvar e Remover)
+            const acoesCell = row.insertCell();
+            acoesCell.className = 'space-x-2 whitespace-nowrap'; // Para alinhar botões
+
+            const saveButton = document.createElement('button');
+            saveButton.innerHTML = '<i class="fas fa-save mr-1"></i>Salvar';
+            saveButton.title = 'Salvar alterações deste candidato';
+            saveButton.className = 'bg-accent text-white text-xs py-1 px-3 rounded-md hover:bg-blue-700 transition inline-flex items-center';
+            saveButton.onclick = () => handleSaveCandidatura(candidato.id_candidatura_vaga, row);
+            acoesCell.appendChild(saveButton);
+
+            const removeButton = document.createElement('button');
+            removeButton.innerHTML = '<i class="fas fa-trash-alt mr-1"></i>Remover';
+            removeButton.title = 'Remover este candidato do processo seletivo';
+            removeButton.className = 'bg-red-600 text-white text-xs py-1 px-3 rounded-md hover:bg-red-700 transition inline-flex items-center';
+            removeButton.onclick = () => handleRemoveCandidatura(candidato.id_candidatura_vaga, row);
+            acoesCell.appendChild(removeButton);
+          });
+          vagaContainer.appendChild(table);
+        }
+        processoSeletivoContentArea.appendChild(vagaContainer);
+      });
+    }
+
+    async function handleSaveCandidatura(idCandidaturaVaga, rowElement) {
+        const statusSelect = rowElement.querySelector('select[name="status_selecao"]');
+        const dataEntrevistaInput = rowElement.querySelector('input[name="data_entrevista"]');
+        const observacoesTextarea = rowElement.querySelector('textarea[name="observacoes_entrevista"]');
+
+        const dataToSave = {
+            id_candidatura_vaga: idCandidaturaVaga,
+            status_selecao: statusSelect.value,
+            // Enviar data como YYYY-MM-DD HH:MM:SS ou null
+            data_entrevista: dataEntrevistaInput.value ? dataEntrevistaInput.value.replace('T', ' ') + ':00' : null,
+            observacoes_entrevista: observacoesTextarea.value
+        };
+
+        // Adiciona um feedback visual ao botão ou linha
+        const saveButton = rowElement.querySelector('button');
+        const originalButtonText = saveButton.textContent;
+        saveButton.textContent = 'Salvando...';
+        saveButton.disabled = true;
+
+        try {
+            // CORRIGIDO: Caminho da API para update_candidatura_vaga.php
+            const response = await fetch('api/update_candidatura_vaga.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dataToSave)
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Dados salvos com sucesso!'); // Melhorar com um toast/notificação não obstrutiva
+                 // Opcional: atualizar a data "atualizado_em" na interface se a API retornar
+            } else {
+                alert(`Erro ao salvar: ${result.message || 'Erro desconhecido.'}`);
+            }
+        } catch (error) {
+            console.error('Erro ao salvar candidatura:', error);
+            alert('Falha ao conectar com o servidor para salvar.');
+        } finally {
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
+        }
+    }
+
+    async function handleRemoveCandidatura(idCandidaturaVaga, rowElement) {
+        if (!confirm('Tem certeza que deseja remover este candidato do processo seletivo desta vaga?')) {
+            return;
+        }
+
+        const removeButton = rowElement.querySelector('button[title*="Remover"]'); // Seleciona o botão de remover
+        const originalButtonHTML = removeButton ? removeButton.innerHTML : '';
+        if (removeButton) {
+            removeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Removendo...';
+            removeButton.disabled = true;
+        }
+
+        try {
+            const response = await fetch('api/remove_candidato_processo.php', {
+                method: 'POST', // ou 'DELETE', mas o PHP script espera POST com JSON no corpo
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id_candidatura_vaga: idCandidaturaVaga })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Candidato removido com sucesso!');
+                rowElement.remove(); // Remove a linha da tabela na interface
+                // Opcional: recarregar dados ou atualizar contadores se houver
+            } else {
+                alert(`Erro ao remover candidato: ${result.message || 'Erro desconhecido.'}`);
+                if (removeButton) {
+                    removeButton.innerHTML = originalButtonHTML;
+                    removeButton.disabled = false;
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao remover candidatura:', error);
+            alert('Falha ao conectar com o servidor para remover.');
+            if (removeButton) {
+                removeButton.innerHTML = originalButtonHTML;
+                removeButton.disabled = false;
+            }
+        }
+    }
+
+    // Event listener para o botão da aba Processo Seletivo
+    if (processoSeletivoTabButton) {
+      processoSeletivoTabButton.addEventListener('click', () => {
+        // Verifica se a aba está ativa (pode depender da sua lógica de abas)
+        // Este é um exemplo, você pode precisar de uma forma mais robusta de verificar a aba ativa
+        if (!processoSeletivoTab.classList.contains('hidden')) { 
+          // Carrega os dados apenas se ainda não foram carregados ou se o filtro de vaga está vazio
+          // ou se deseja recarregar sempre. Para este exemplo, recarregamos.
+          fetchProcessoSeletivoData(vagaFilterSelect.value || null);
+        }
+      });
+    }
+
+    // Event listener para o filtro de vagas
+    if (vagaFilterSelect) {
+      vagaFilterSelect.addEventListener('change', (event) => {
+        const selectedVagaId = event.target.value;
+        if (selectedVagaId) {
+            // Filtra os dados já carregados (allProcessoSeletivoData)
+            const filteredData = allProcessoSeletivoData.filter(vagaGroup => vagaGroup.vaga_info.id.toString() === selectedVagaId);
+            displayProcessoSeletivoData(filteredData);
+        } else {
+            // Se "Todas as Vagas" for selecionado, exibe todos os dados carregados
+            displayProcessoSeletivoData(allProcessoSeletivoData);
+        }
+      });
+    }
+
+    // Função para lidar com a troca de abas e carregar dados se necessário
+    // (Adapte à sua lógica de troca de abas existente)
+    function handleTabSwitch(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.add('hidden'); // Ou style.display = 'none'
+        });
+        const activeTab = document.getElementById(tabId);
+        if (activeTab) {
+            activeTab.classList.remove('hidden'); // Ou style.display = 'block'
+            if (tabId === 'processo-seletivo-tab' && allProcessoSeletivoData.length === 0) {
+                // Carrega os dados na primeira vez que a aba é aberta
+                fetchProcessoSeletivoData(); 
+            }
+            // Adicione aqui a lógica para carregar dados de outras abas se necessário
+            if (tabId === 'inscritos-tab') {
+              // loadInscritosData(); // Exemplo, se você tiver uma função para carregar inscritos
+            }
+            // etc para outras abas
+        }
+    }
+
+    // Adiciona event listeners aos botões de aba (assumindo que eles têm a classe 'tab-button')
+    // Este é um exemplo genérico de como a lógica de abas pode funcionar.
+    // Se você já tem uma função de troca de abas, integre a chamada a fetchProcessoSeletivoData nela.
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tabId = button.getAttribute('data-tab');
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('bg-accent', 'text-white')); // Remove active style
+            button.classList.add('bg-accent', 'text-white'); // Add active style
+            handleTabSwitch(tabId);
+        });
+    });
+
+    // No carregamento inicial da página, se a aba de processo seletivo for a padrão (improvável)
+    // ou se você quiser pré-carregar os dados:
+    // if (document.getElementById('processo-seletivo-tab') && !document.getElementById('processo-seletivo-tab').classList.contains('hidden')){
+    //    fetchProcessoSeletivoData();
+    // }
+    // A lógica de qual aba mostrar no início já está no seu código:
+    // statsTabButton.click(); 
+
+    // --- Funções para o Modal Adicionar Candidato ---
+    async function openAddCandidatoModal(vagaId, vagaTitulo) {
+        // Busca direta dos elementos no DOM no momento da execução da função
+        const modalDiv = document.getElementById('addCandidatoProcessoModal');
+        const modalTitle = document.getElementById('addCandidatoModalTitle');
+        const vagaIdInput = document.getElementById('addCandidatoVagaId');
+        const candidatoSelect = document.getElementById('addCandidatoSelect');
+        const errorP = document.getElementById('addCandidatoError');
+
+        // Log detalhado para cada elemento buscado
+        console.log('[openAddCandidatoModal] Tentativa de busca direta no DOM:');
+        console.log('  > addCandidatoProcessoModal:', modalDiv);
+        console.log('  > addCandidatoModalTitle:', modalTitle);
+        console.log('  > addCandidatoVagaId:', vagaIdInput);
+        console.log('  > addCandidatoSelect:', candidatoSelect);
+        console.log('  > addCandidatoError:', errorP);
+
+        if (!modalDiv || !modalTitle || !vagaIdInput || !candidatoSelect || !errorP) {
+            let missingElements = [];
+            if (!modalDiv) missingElements.push('addCandidatoProcessoModal');
+            if (!modalTitle) missingElements.push('addCandidatoModalTitle');
+            if (!vagaIdInput) missingElements.push('addCandidatoVagaId');
+            if (!candidatoSelect) missingElements.push('addCandidatoSelect');
+            if (!errorP) missingElements.push('addCandidatoError');
+            
+            alert(`Erro crítico: Os seguintes elementos do modal Adicionar Candidato não foram encontrados no DOM: ${missingElements.join(', ')}. Verifique o console.`);
+            console.error('Elementos ausentes:', missingElements);
+            return;
+        }
+
+        modalTitle.textContent = `Adicionar Candidato à Vaga: ${vagaTitulo}`;
+        vagaIdInput.value = vagaId;
+        candidatoSelect.innerHTML = '<option value="">Carregando candidatos...</option>';
+        errorP.classList.add('hidden');
+        errorP.textContent = '';
+
+        try {
+            const response = await fetch('api/get_all_candidatos_list.php');
+            const result = await response.json();
+            if (result.success && result.data) {
+                candidatoSelect.innerHTML = '<option value="">Selecione um candidato</option>';
+                result.data.forEach(candidato => {
+                    const option = document.createElement('option');
+                    option.value = candidato.email;
+                    option.textContent = `${candidato.nome} (${candidato.email})`;
+                    candidatoSelect.appendChild(option);
+                });
+            } else {
+                candidatoSelect.innerHTML = '<option value="">Erro ao carregar candidatos</option>';
+                console.error('Erro ao buscar lista de candidatos:', result.message);
+            }
+        } catch (error) {
+            candidatoSelect.innerHTML = '<option value="">Falha ao carregar candidatos</option>';
+            console.error('Falha ao conectar para buscar candidatos:', error);
+        }
+
+        modalDiv.classList.remove('hidden');
+        setTimeout(() => {
+            const modalContentBox = modalDiv.querySelector('.modal');
+            if (modalContentBox) {
+                modalContentBox.classList.add('show');
+            }
+        }, 10);
+    }
+
+    function closeAddCandidatoModal() {
+        const modalDiv = document.getElementById('addCandidatoProcessoModal');
+        const form = document.getElementById('addCandidatoProcessoForm');
+        const errorP = document.getElementById('addCandidatoError');
+
+        if (modalDiv) {
+            const modalContentBox = modalDiv.querySelector('.modal');
+            if (modalContentBox) {
+                modalContentBox.classList.remove('show');
+            }
+            setTimeout(() => {
+                modalDiv.classList.add('hidden');
+                if (form) form.reset();
+                if (errorP) {
+                    errorP.classList.add('hidden');
+                    errorP.textContent = '';
+                }
+            }, 300);
+        } else {
+            console.error('[closeAddCandidatoModal] Elemento modalDiv (addCandidatoProcessoModal) não encontrado.');
+        }
+    }
+
+    async function handleAddCandidatoSubmit(event) {
+        event.preventDefault();
+        const vagaIdInput = document.getElementById('addCandidatoVagaId');
+        const candidatoSelect = document.getElementById('addCandidatoSelect');
+        const errorP = document.getElementById('addCandidatoError');
+        const form = document.getElementById('addCandidatoProcessoForm'); // O form em si
+
+        if (!vagaIdInput || !candidatoSelect || !errorP || !form) {
+            let missing = [];
+            if(!vagaIdInput) missing.push('addCandidatoVagaId');
+            if(!candidatoSelect) missing.push('addCandidatoSelect');
+            if(!errorP) missing.push('addCandidatoError');
+            if(!form) missing.push('addCandidatoProcessoForm');
+            alert(`Erro ao submeter: Elementos do formulário não encontrados: ${missing.join(', ')}`);
+            console.error('[handleAddCandidatoSubmit] Elementos ausentes:', missing);
+            return;
+        }
+
+        const vagaId = vagaIdInput.value;
+        const candidatoEmail = candidatoSelect.value;
+
+        if (!vagaId || !candidatoEmail) {
+            errorP.textContent = 'Por favor, selecione um candidato.';
+            errorP.classList.remove('hidden');
+            return;
+        }
+
+        errorP.classList.add('hidden');
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        if (!submitButton) {
+            console.error('[handleAddCandidatoSubmit] Botão de submit não encontrado dentro do formulário.');
+            alert('Erro: Botão de submissão não encontrado.');
+            return;
+        }
+
+        const originalButtonHTML = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adicionando...';
+        submitButton.disabled = true;
+
+        const dataToSend = { vaga_id: vagaId, candidato_email: candidatoEmail };
+
+        // Log para verificar os dados antes de enviar
+        console.log('[handleAddCandidatoSubmit] Dados para enviar:', dataToSend);
+
+        try {
+            const response = await fetch('api/add_candidato_processo.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dataToSend)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Candidato adicionado com sucesso!');
+                console.log('[handleAddCandidatoSubmit] Sucesso ao adicionar. Fechando modal.');
+                closeAddCandidatoModal();
+                
+                const filtroVagaAtual = vagaFilterSelect.value || null;
+                console.log('[handleAddCandidatoSubmit] Tentando recarregar dados com filtro de vaga:', filtroVagaAtual);
+                
+                // Atualizar a visualização da aba Processo Seletivo
+                fetchProcessoSeletivoData(filtroVagaAtual);
+                console.log('[handleAddCandidatoSubmit] Chamada para fetchProcessoSeletivoData concluída.');
+            } else {
+                addCandidatoError.textContent = `Erro: ${result.message || 'Não foi possível adicionar o candidato.'}`;
+                addCandidatoError.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Erro ao adicionar candidato:', error);
+            addCandidatoError.textContent = 'Falha na comunicação com o servidor.';
+            addCandidatoError.classList.remove('hidden');
+        } finally {
+            submitButton.innerHTML = originalButtonHTML;
+            submitButton.disabled = false;
+        }
+    }
+
+    // Event Listeners para o Modal Adicionar Candidato
+    if (addCandidatoProcessoForm) {
+        addCandidatoProcessoForm.addEventListener('submit', handleAddCandidatoSubmit);
+    }
+    if (closeAddCandidatoModalButton) {
+        closeAddCandidatoModalButton.addEventListener('click', closeAddCandidatoModal);
+    }
+    if (cancelAddCandidatoModalButton) {
+        cancelAddCandidatoModalButton.addEventListener('click', closeAddCandidatoModal);
+    }
+    if (addCandidatoProcessoModal) {
+      addCandidatoProcessoModal.addEventListener('mousedown', function (e) {
+        const modalBox = this.querySelector('.modal');
+        if (modalBox && !modalBox.contains(e.target)) {
+            closeAddCandidatoModal();
+        }
+      });
+    }
+    // --- Fim das Funções para o Modal Adicionar Candidato ---
+
+  </script>
+
+  <script>
+    // ... existing code ...
+
+    // Load resumes
+    async function loadResumes() {
+      await fetchResumes();
+      await loadAreas();
+    }
+
+    // Load areas for filter
+    async function loadAreas() {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/get_areas.php`);
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const areas = await response.json();
+        
+        const areaFilter = document.getElementById('areaFilter');
+        areaFilter.innerHTML = '<option value="">Todas as áreas</option>';
+        
+        areas.forEach(area => {
+          if (area && area.trim()) {
+            const option = document.createElement('option');
+            option.value = area;
+            option.textContent = area;
+            areaFilter.appendChild(option);
+          }
+        });
+      } catch (error) {
+        console.error('Erro ao carregar áreas:', error);
+      }
+    }
+
+
+
+    // Load job postings
+    async function loadJobPostings() {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/get_jobs.php`);
+        if (!response.ok) throw new Error('Erro HTTP: ' + response.status);
+        const data = await response.json();
+        jobPostings = data;
+        filterAndRenderJobs();
+      } catch (error) {
+        console.error('Erro ao carregar vagas:', error);
+      }
+    }
+
+    // Event Listeners
+    let isInitialized = false;
+    document.addEventListener('DOMContentLoaded', () => {
+      if (isInitialized) return;
+      isInitialized = true;
+
+      // Carregar dados iniciais
+      loadResumes();
+      loadJobPostings();
+      
+      // Listener para o botão de aplicar filtros
+      const applyFiltersButton = document.getElementById('applyFilters');
+      if (applyFiltersButton) {
+        applyFiltersButton.addEventListener('click', () => {
+          fetchResumes();
+          document.getElementById('downloadFiltered').disabled = false;
+        });
+      }
+      
+      // Listener para o botão de download
+      const downloadButton = document.getElementById('downloadFiltered');
+      if (downloadButton) {
+        downloadButton.addEventListener('click', async () => {
+            downloadButton.disabled = true;
+            downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Baixando...';
+            
+            try {
+                // Obter os valores dos filtros
+                const dataInicio = document.getElementById('resumeDataInicio').value;
+                const dataFim = document.getElementById('resumeDataFim').value;
+                const area = document.getElementById('areaFilter').value;
+                const escolaridade = document.getElementById('escolaridadeFilter').value;
+                const searchTerm = document.getElementById('searchInput').value;
+                
+                // Construir parâmetros da URL
+                const params = new URLSearchParams();
+                if (dataInicio) params.append('data_inicio', dataInicio);
+                if (dataFim) params.append('data_fim', dataFim);
+                if (area && area !== 'Todas as áreas') params.append('area', area);
+                if (escolaridade && escolaridade !== 'Todas') params.append('escolaridade', escolaridade);
+                if (searchTerm) params.append('search', searchTerm);
+                
+                const response = await fetch(`${getApiBaseUrl()}/download_daily_resumes.php${params.toString() ? '?' + params.toString() : ''}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/zip, application/json'
+                    }
+                });
+        
+        if (!response.ok) {
+                    let errorMessage = 'Erro ao baixar currículos';
+                    
+                    // Tentar ler o erro como JSON
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                            if (errorData.details && errorData.details.length > 0) {
+                                errorMessage += '\n\nDetalhes:\n' + errorData.details.join('\n');
+                            }
+                        }
+                    } catch (jsonError) {
+                        errorMessage = `Erro ${response.status}: ${response.statusText}`;
+                    }
+                    
+                    // Mostrar erro em um modal estilizado
+                    Swal.fire({
+                        title: 'Erro ao Baixar Currículos',
+                        text: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#3085d6'
+                    });
+                    return;
+                }
+
+                // Verificar o tipo de conteúdo
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const jsonResponse = await response.json();
+                    if (jsonResponse.error) {
+                        throw new Error(jsonResponse.message || 'Erro ao processar currículos');
+                    }
+                }
+
+                const blob = await response.blob();
+                if (blob.size === 0) {
+                    throw new Error('O arquivo ZIP está vazio');
+                }
+
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                
+                // Nome do arquivo com data e filtros aplicados
+                let fileName = 'curriculos';
+                if (dataInicio || dataFim) {
+                    fileName += '_' + (dataInicio || 'inicio') + '_ate_' + (dataFim || 'fim');
+                }
+                if (area && area !== 'Todas as áreas') fileName += '_' + area.replace(/[^a-z0-9]/gi, '_');
+                if (escolaridade && escolaridade !== 'Todas') fileName += '_' + escolaridade.replace(/[^a-z0-9]/gi, '_');
+                fileName += '.zip';
+                
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(a);
+
+                // Mostrar mensagem de sucesso
+                Swal.fire({
+                    title: 'Download Iniciado',
+                    text: 'O download dos currículos foi iniciado com sucesso!',
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+      } catch (error) {
+                console.error('Erro ao baixar currículos:', error);
+                
+                // Mostrar erro em um modal estilizado
+                Swal.fire({
+                    title: 'Erro ao Baixar Currículos',
+                    text: error.message || 'Ocorreu um erro ao tentar baixar os currículos.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3085d6'
+                });
+            } finally {
+                downloadButton.innerHTML = '<i class="fas fa-download"></i> Baixar Currículos Filtrados';
+                downloadButton.disabled = false;
+            }
+        });
+      }
+      
+      // Listener para pesquisa em tempo real com debounce
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+    let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+            fetchResumes();
+          }, 500); // Delay de 500ms para evitar muitas requisições
+        });
+      }
+    });
+  </script>
+</body>
+</html>
